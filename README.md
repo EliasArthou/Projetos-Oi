@@ -1,4 +1,4 @@
-# Projetos-Oi
+# Tratar Extração SAP
 
 Projeto pega os arquivos do SAP e realiza um leitura linha a linha para realizar a 
 limpeza de cabeçalhos intermediários e quebras de página que ocorre quando extraímos 
@@ -16,4 +16,8 @@ Ex:
 No exemplo acima a variável teria que ser igual a 5 (cinco) porque ele considera que tem um coluna vazia no início
 e no final pois a linha inicia e começa com "|" e quando usa o split para quebrar a linha pelo separador o vetor 
 resultante ficará com essas 2 colunas em branco (o código trata isso fazendo com que o arquivo resultante não comece
-nem termine com pipline ("|")
+nem termine com pipline ("|").
+
+O código pode ser adaptado para outras quebras de linhas e tratamentos de TXTs, o código está bem rápido (fiz testes
+com arquivos de 1,3 GBs e rodou em 4 mins fazendo o tratamento de campo texto para tentar extrair um fornecedor) mas
+pode ser melhorado com uma adaptação para execução em paralelo (não o fiz porque não vi necessidade), fiquem a vontade.
