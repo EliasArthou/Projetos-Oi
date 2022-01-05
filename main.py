@@ -14,7 +14,7 @@ if len(arquivo_caminho_origem) == 0:
                       'Caminho dos Arquivos a Tratar não selecionado')
     sys.exit()
 
-resultado=''
+resultado = ''
 
 arquivo_caminho_destino = aux.caminhoselecionado(3)
 if len(arquivo_caminho_destino) == 0:
