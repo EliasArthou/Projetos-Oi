@@ -27,7 +27,7 @@ def caminhoselecionado(tipojanela=1):
         retorno = filedialog.askopenfilename(title='Selecione o arquivo a ser tratado:',
                                              initialdir=caminhospadroes(5), filetypes=[('Arquivos Texto', '*.txt')])
         if retorno is None:  # asksaveasfile return `None` if dialog closed with "cancel".
-            return None
+            return ''
 
     elif tipojanela == 2:
         name = filedialog.asksaveasfile(mode='w', defaultextension='.txt',
@@ -35,7 +35,7 @@ def caminhoselecionado(tipojanela=1):
                                         initialdir=caminhospadroes(5),
                                         title='Selecione onde salvar o arquivo')
         if name is None:  # asksaveasfile return `None` if dialog closed with "cancel".
-            return None
+            return ''
         text2save = str(name.name)
         name.write('')
         retorno = text2save
@@ -43,7 +43,7 @@ def caminhoselecionado(tipojanela=1):
     elif tipojanela == 3:
         name = filedialog.askdirectory(initialdir=caminhospadroes(5), title='Selecione a Pasta')
         if name is None:  # askdirectory return `None` if dialog closed with "cancel".
-            return None
+            return ''
         text2save = name
         retorno = text2save
 
