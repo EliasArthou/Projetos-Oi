@@ -21,3 +21,6 @@ nem termine com pipline ("|").
 O código pode ser adaptado para outras quebras de linhas e tratamentos de TXTs, o código está bem rápido (fiz testes
 com arquivos de 1,3 GBs e rodou em 4 mins fazendo o tratamento de campo texto para tentar extrair um fornecedor) mas
 pode ser melhorado com uma adaptação para execução em paralelo (não o fiz porque não vi necessidade), fiquem a vontade.
+
+Lembrar de criar o arquivo .py com as especificações de segurança do seu banco de dados e substituir na importação da 
+biblioteca "sensíveis" com os dados do BD que ele tem que subir a informação resultante do(s) arquivo(s) tratado(s).
