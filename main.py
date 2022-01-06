@@ -27,6 +27,7 @@ tempoinicio = time.time()
 
 
 #Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
+
 for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     objarquivo = aux.TrabalhaArquivo(arquivo)
     objarquivo.verificacabecalho('|', quantcolunas)

@@ -62,7 +62,7 @@ def retornaarquivos(caminho):
         for diretorio, subpastas, arquivos in os.walk(caminho):
             for arquivo in arquivos:
                 arquivoatual = os.path.join(os.path.realpath(diretorio), arquivo)
-                if right(arquivoatual, 4) == '.TXT':   #Equivalente a 4 dígitos a direita
+                if right(arquivoatual.upper(), 4) == '.TXT':   #Equivalente a 4 dígitos a direita
                     lista.append(os.path.join(os.path.realpath(diretorio), arquivo))
     else:
         return
