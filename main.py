@@ -25,6 +25,7 @@ if len(arquivo_caminho_destino) == 0:
 
 tempoinicio = time.time()
 
+
 #Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
 for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     objarquivo = aux.TrabalhaArquivo(arquivo)
@@ -37,6 +38,7 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     caminhoerro = caminhoerro.replace('.TXT', '.ERR')
     caminholog = caminhosalvo.upper()
     caminholog = caminholog.replace('.TXT', '.LOG')
+    tempopergunta = time.time()
     tabela = 'GIG OPEX Entrada Compromisso Ex Carga'
     if len(caminhofornec) > 0:
         caminhoerrofornec = caminhofornec.upper()
@@ -53,9 +55,13 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
         if len(caminhofornec) > 0:
             os.system('bcp ' + conf.schema + '."[' + tabelafornecedor + ']" IN ' + caminhofornec + ' -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e ' + caminhoerrofornec + ' -F 2 > ' + caminhologfornec)
 
+
 tempofim = time.time()
 
-tempototal = (tempopergunta-tempoinicio)+(tempofim-temporesposta)
+if tratarfornecedor:
+    tempototal = (tempopergunta-tempoinicio)+(tempofim-temporesposta)
+else:
+    tempototal = tempofim - tempoinicio
 
 hours, rem = divmod(tempototal, 3600)
 minutes, seconds = divmod(rem, 60)
