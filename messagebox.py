@@ -32,16 +32,31 @@ MB_SETFOREGROUND = 0x10000
 MB_TOPMOST = 0x40000
 MB_SERVICE_NOTIFICATION = 0x200000
 
-IDABORT = 3
-IDCANCEL = 2
-IDCONTINUE = 11
-IDIGNORE = 5
-IDNO = 7
 IDOK = 1
+IDCANCEL = 2
+IDABORT = 3
 IDRETRY = 4
-IDTRYAGAIN = 10
+IDIGNORE = 5
 IDYES = 6
+IDNO = 7
+IDTRYAGAIN = 10
+IDCONTINUE = 11
 
 
 def msgbox(text, style, title):
     return ctypes.windll.user32.MessageBoxW(None, text, title, style)
+
+
+def criarinputbox(titulo, mensagem, substituircaracter=''):
+    import tkinter as tk
+    from tkinter import simpledialog
+
+    ROOT = tk.Tk()
+
+    ROOT.withdraw()
+    # the input dialog
+    USER_INP = simpledialog.askstring(title=titulo, prompt=mensagem, show=substituircaracter)
+    if USER_INP is None:
+        USER_INP = 0
+
+    return USER_INP

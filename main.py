@@ -6,7 +6,17 @@ import sys
 import sensiveis as conf
 
 
-quantcolunas = 0
+pergunta = messagebox.msgbox('Tem colunas de pré-cabeçalho?', messagebox.MB_YESNO,
+                      'Tratamento de cabeçalho')
+if pergunta == messagebox.IDYES:
+    quantcolunas = messagebox.criarinputbox('Quant. colunas do arquivo', 'Quantas colunas tem o arquivo '
+                                            '(lembrar que o SAP adiciona 2 colunas a mais)?')
+    if quantcolunas < 4 or not str(quantcolunas).isnumeric():
+        messagebox.msgbox('Valor inválido', messagebox.MB_OK, 'Valor inválido informado!')
+        sys.exit()
+else:
+    quantcolunas = 0
+
 tratarfornecedor = False
 arquivo_caminho_origem = aux.caminhoselecionado(3)
 if len(arquivo_caminho_origem) == 0:
@@ -26,7 +36,7 @@ if len(arquivo_caminho_destino) == 0:
 tempoinicio = time.time()
 
 
-#Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
+# Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
 
 for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     objarquivo = aux.TrabalhaArquivo(arquivo)
