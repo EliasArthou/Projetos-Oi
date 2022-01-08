@@ -1,5 +1,5 @@
 import os.path
-#import pandas as pd
+# import pandas as pd
 import re
 
 
@@ -87,8 +87,8 @@ def index_of(val, in_list):
         return in_list.index(val)
     except ValueError:
         return -1
-#if tipo.strip() == 'WE' or tipo.strip() == 'AB' or tipo.strip() == 'D6' or tipo.strip() == 'RE':
-#elif tipo.strip() == 'EP' or tipo.strip() == 'PV':
+# if tipo.strip() == 'WE' or tipo.strip() == 'AB' or tipo.strip() == 'D6' or tipo.strip() == 'RE':
+# elif tipo.strip() == 'EP' or tipo.strip() == 'PV':
 
 def listarnumeros(tipo, texto):
 
@@ -101,7 +101,6 @@ def listarnumeros(tipo, texto):
 
         case _:
             return re.findall(r'([\d]{6}[\d]*)[\D]', texto)
-
 
 
 class TrabalhaArquivo:

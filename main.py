@@ -5,13 +5,13 @@ import os
 import sys
 import sensiveis as conf
 
-
 pergunta = messagebox.msgbox('Tem colunas de pré-cabeçalho?', messagebox.MB_YESNO,
-                      'Tratamento de cabeçalho')
+                             'Tratamento de cabeçalho')
 if pergunta == messagebox.IDYES:
-    quantcolunas = messagebox.criarinputbox('Quant. colunas do arquivo', 'Quantas colunas tem o arquivo '
-                                            '(lembrar que o SAP adiciona 2 colunas a mais)?')
-    if quantcolunas < 4 or not str(quantcolunas).isnumeric():
+    quantcolunas = int(messagebox.criarinputbox('Quant. colunas do arquivo', 'Quantas colunas tem o arquivo '
+                                                                         '(lembrar que o SAP adiciona 2 colunas a '
+                                                                         'mais)?'))
+    if int(quantcolunas) < 4 or not str(quantcolunas).isnumeric():
         messagebox.msgbox('Valor inválido', messagebox.MB_OK, 'Valor inválido informado!')
         sys.exit()
 else:
@@ -32,9 +32,7 @@ if len(arquivo_caminho_destino) == 0:
                       'Caminho Destino dos Arquivos Tratados não selecionado')
     sys.exit()
 
-
 tempoinicio = time.time()
-
 
 # Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
 
@@ -62,19 +60,25 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
         resultado = messagebox.msgbox('Subir pro banco?', messagebox.MB_YESNO, 'Carga SQL')
     temporesposta = time.time()
     if resultado == messagebox.IDYES:
-        os.system('bcp ' + conf.schema + '."[' + tabela + ']" IN "' + caminhosalvo + '" -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e "' + caminhoerro + '" -F 2 > "' + caminholog+'"')
+        os.system(
+            'bcp ' + conf.schema + '."[' + tabela + ']" IN "' + caminhosalvo + '" -t "|" -C '
+                                                                               'SQL_Latin1_General_CP1_CI_AS -c -S '
+            + conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e "' +
+            caminhoerro + '" -F 2 > "' + caminholog + '"')
         if len(caminhofornec) > 0:
-            os.system('bcp ' + conf.schema + '."[' + tabelafornecedor + ']" IN ' + caminhofornec + ' -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e ' + caminhoerrofornec + ' -F 2 > ' + caminhologfornec)
-
+            os.system(
+                'bcp ' + conf.schema + '."[' + tabelafornecedor + ']" IN ' + caminhofornec + ' -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e ' + caminhoerrofornec + ' -F 2 > ' + caminhologfornec)
 
 tempofim = time.time()
 
 if tratarfornecedor:
-    tempototal = (tempopergunta-tempoinicio)+(tempofim-temporesposta)
+    tempototal = (tempopergunta - tempoinicio) + (tempofim - temporesposta)
 else:
     tempototal = tempofim - tempoinicio
 
 hours, rem = divmod(tempototal, 3600)
 minutes, seconds = divmod(rem, 60)
 
-messagebox.msgbox(f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}', messagebox.MB_OK, 'Tempo Decorrido')
+messagebox.msgbox(
+    f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
+    messagebox.MB_OK, 'Tempo Decorrido')
