@@ -1,3 +1,7 @@
+"""
+Início de tratamento de arquivo
+"""
+
 import time
 import messagebox
 import auxiliares as aux

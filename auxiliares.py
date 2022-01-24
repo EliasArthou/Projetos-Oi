@@ -2,6 +2,9 @@ import os.path
 # import pandas as pd
 import re
 
+import pypyodbc
+
+import sensiveis as pwd
 
 def caminhospadroes(caminho):
     # Pegar a pasta "Meus Documentos" do usuário
@@ -242,8 +245,10 @@ def acertavalor(valor):
         valor = float(valor)
     return valor
 
+
 def to_raw(string):
     return fr"{string}"
+
 
 
 
