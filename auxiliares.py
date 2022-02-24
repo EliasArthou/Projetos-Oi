@@ -18,7 +18,7 @@ def caminhospadroes(caminho):
     return buf.value
 
 
-def caminhoselecionado(tipojanela=1):
+def caminhoselecionado(tipojanela=1, titulo=''):
     import tkinter as tk
     from tkinter import filedialog
 
@@ -44,7 +44,7 @@ def caminhoselecionado(tipojanela=1):
         retorno = text2save
 
     elif tipojanela == 3:
-        name = filedialog.askdirectory(initialdir=caminhospadroes(5), title='Selecione a Pasta')
+        name = filedialog.askdirectory(initialdir=caminhospadroes(5), title=titulo)
         if name is None:  # askdirectory return `None` if dialog closed with "cancel".
             return ''
         text2save = name

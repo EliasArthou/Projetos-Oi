@@ -27,7 +27,7 @@ else:
     quantcolunas = 0
 
 tratarfornecedor = False
-arquivo_caminho_origem = aux.caminhoselecionado(3)
+arquivo_caminho_origem = aux.caminhoselecionado(3, 'Arquivos a Tratar')
 if len(arquivo_caminho_origem) == 0:
     messagebox.msgbox('Selecionar a pasta com os arquivos a serem tratados', messagebox.MB_OK,
                       'Caminho dos Arquivos a Tratar não selecionado')
@@ -35,7 +35,7 @@ if len(arquivo_caminho_origem) == 0:
 
 resultado = 0
 
-arquivo_caminho_destino = aux.caminhoselecionado(3)
+arquivo_caminho_destino = aux.caminhoselecionado(3, 'Lugar para Arquivos Tratados')
 if len(arquivo_caminho_destino) == 0:
     messagebox.msgbox('Selecionar a pasta onde os arquivos tratados serão salvos', messagebox.MB_OK,
                       'Caminho Destino dos Arquivos Tratados não selecionado')
