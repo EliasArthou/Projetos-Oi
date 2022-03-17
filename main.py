@@ -8,11 +8,12 @@ import auxiliares as aux
 import os
 import sys
 import sensiveis as conf
+import pandas
+# from IPython.display import display  # pip install IPython
 
-
-tabela = ''
-tabelafornecedor = ''
-
+tabela = 'GIG TESTE FORN'
+tabelafornecedor = 'GIG Texto Fornecedor'
+listadicionario = None
 
 pergunta = messagebox.msgbox('Tem colunas de pré-cabeçalho?', messagebox.MB_YESNO,
                              'Tratamento de cabeçalho')
@@ -26,7 +27,7 @@ if pergunta == messagebox.IDYES:
 else:
     quantcolunas = 0
 
-tratarfornecedor = False
+tratarfornecedor = True
 arquivo_caminho_origem = aux.caminhoselecionado(3, 'Arquivos a Tratar')
 if len(arquivo_caminho_origem) == 0:
     messagebox.msgbox('Selecionar a pasta com os arquivos a serem tratados', messagebox.MB_OK,
@@ -47,9 +48,48 @@ tempoinicio = time.time()
 
 for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     objarquivo = aux.TrabalhaArquivo(arquivo)
-    objarquivo.verificacabecalho('|', quantcolunas)
-    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|')
+    inicioetapa = time.time()
+    mensagemetapa = 'Verificando Cabeçalho...'
+    print(mensagemetapa)
 
+    objarquivo.verificacabecalho('|', quantcolunas, True, True)
+
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Tratando Linha Quebrada...'
+    print(mensagemetapa)
+    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|', True, True)
+
+    # fimetapa = time.time()
+    # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    # mensagemetapa = 'Acertando Valor...'
+    # print(mensagemetapa)
+
+    # listadicionario = objarquivo.retornadf('Mont.em MI')
+
+    # fimetapa = time.time()
+    # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    # mensagemetapa = 'Salvando Arquivo...'
+    # print(mensagemetapa)
+
+    print(listadicionario)
+
+listadicionario.to_csv(arquivo_caminho_destino+'\\pandas.txt', index=None, sep='|', mode='a')
+
+fimetapa = time.time()
+inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+
+tempofim = time.time()
+tempototal = tempofim - tempoinicio
+
+hours, rem = divmod(tempototal, 3600)
+minutes, seconds = divmod(rem, 60)
+
+messagebox.msgbox(
+    f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
+    messagebox.MB_OK, 'Tempo Decorrido')
+
+"""
     caminhosalvo, caminhofornec = objarquivo.salvar_arquivo(arquivo_caminho_destino, tratarfornecedor)
 
     caminhoerro = caminhosalvo.upper()
@@ -65,7 +105,7 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
         caminhoerrofornec = caminhoerrofornec.replace('.TXT', '.ERR')
         caminhologfornec = caminhofornec.upper()
         caminhologfornec = caminhologfornec.replace('.TXT', '.LOG')
-        tabelafornecedor = 'GIG IndicexFornecedor'
+
     tempopergunta = time.time()
     if resultado == 0:
         resultado = messagebox.msgbox('Subir pro banco?', messagebox.MB_YESNO, 'Carga SQL')
@@ -78,8 +118,9 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
             # Posterior criação de verificação de quantidade de campos e se a tabela existe
             # (posso criar uma verificação de tipos dos campos também)
             if len(caminhofornec) > 0:
-                tabelafornecedor = messagebox.criarinputbox('Tabela Banco',
-                                                            'Digite a tabela de fornecedor a ser carregada:')
+                if len(tabelafornecedor) == 0:
+                    tabelafornecedor = messagebox.criarinputbox('Tabela Banco',
+                                                                'Digite a tabela de fornecedor a ser carregada:')
 
             if len(tabela) > 0 and ((len(caminhofornec) > 0 and len(tabelafornecedor) > 0) or len(caminhofornec) == 0):
                 os.system('bcp ' + conf.schema + '."[' + tabela + ']" IN "'
@@ -87,10 +128,10 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
                           conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d '
                           + conf.nomebanco + ' -e "' + caminhoerro + '" -F 2 > "' + caminholog + '"')
                 if len(caminhofornec) > 0:
-                    os.system('bcp ' + conf.schema + '."[' + tabelafornecedor + ']" IN ' + caminhofornec +
-                              ' -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' +
-                              conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e ' +
-                              caminhoerrofornec + ' -F 2 > ' + caminhologfornec)
+                    os.system('bcp ' + conf.schema + '."[' + tabelafornecedor + ']" IN "' + caminhofornec +
+                              '" -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' +
+                              conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e "' +
+                              caminhoerrofornec + '" -F 2 > "' + caminhologfornec + '"')
         else:
             messagebox.msgbox('Valor inválido', messagebox.MB_OK, 'Nome da tabela não informado!')
             sys.exit()
@@ -108,3 +149,4 @@ minutes, seconds = divmod(rem, 60)
 messagebox.msgbox(
     f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
     messagebox.MB_OK, 'Tempo Decorrido')
+"""
