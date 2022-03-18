@@ -65,7 +65,7 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     mensagemetapa = 'Acertando Valor...'
     print(mensagemetapa)
 
-    listadicionario = objarquivo.retornadf('Mont.em MI')
+    listadicionario = objarquivo.retornadf('Mont.em MI', True)
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)

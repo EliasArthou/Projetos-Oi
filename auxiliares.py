@@ -200,7 +200,7 @@ def index_of(val, in_list):
         return -1
 
 
-def listarnumeros(tipo, texto, transformaremtexto=False):
+def listarnumeros(tipo, texto, transformaremtexto=True):
     """
     :param transformaremtexto: transformar a lista em texto.
     :param tipo: tipo do lançamento.
@@ -219,7 +219,7 @@ def listarnumeros(tipo, texto, transformaremtexto=False):
             lista = re.findall(r'_([\d]{6,7})_', texto)
 
         case _:
-            lista = re.findall(r'([\d]{6,7}[\d]*)[\D]', texto)
+            lista = re.findall(r'[\D]([\d]{6,7})[\D]', texto)
 
     # Verifica se achou números segundo as regras definidas
     if len(lista) > 0:
@@ -356,8 +356,8 @@ class TrabalhaArquivo:
                                         linhaadicionada = linha.split(separadorlocal)
                                 if len(linhaadicionada) > 0:
                                     linhaadicionada = [campo.strip() for campo in linhaadicionada]
-                                    linhaadicionada = separadorlocal.join(linhaadicionada)
-                                    linhaadicionada = left(linhaadicionada, len(linhaadicionada)-1)
+                                    # linhaadicionada = separadorlocal.join(linhaadicionada)
+                                    # linhaadicionada = left(linhaadicionada, len(linhaadicionada)-1)
                                     self.listaarquivo.append(linhaadicionada)
 
                 return listalinhascortadas, listalinhasacertadas
@@ -457,12 +457,12 @@ class TrabalhaArquivo:
             mensagemetapa = 'Adicionando coluna Fornecedor...'
             print(mensagemetapa)
 
-            totalinhas = len(df.index)
-            with tqdm(total=totalinhas) as barra_progresso:
-            #    for indice, linha in enumerate(df['Tipo']):
-            #        listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
-                listafornecedores = Parallel(n_jobs=2)(delayed(listarnumeros(df['Tipo'].values[indice], df['Texto'].values[indice]) for indice, linha in enumerate(df['Tipo'])))
-                barra_progresso.update()
+            # totalinhas = len(df.index)
+            # with tqdm(total=totalinhas, unit=' linhas') as barra_progresso:
+                # for indice, linha in enumerate(df['Tipo']):
+                #    listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
+            listafornecedores = Parallel(n_jobs=3)(delayed(listarnumeros)(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice]) for indice, linha in enumerate(df['Tipo']))
+                #    barra_progresso.update()
 
             df['Fornecedores'] = listafornecedores
 
