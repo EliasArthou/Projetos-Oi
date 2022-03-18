@@ -58,19 +58,19 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
     mensagemetapa = 'Tratando Linha Quebrada...'
     print(mensagemetapa)
-    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|', True, True)
+    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|')
 
-    # fimetapa = time.time()
-    # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    # mensagemetapa = 'Acertando Valor...'
-    # print(mensagemetapa)
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Acertando Valor...'
+    print(mensagemetapa)
 
-    # listadicionario = objarquivo.retornadf('Mont.em MI')
+    listadicionario = objarquivo.retornadf('Mont.em MI')
 
-    # fimetapa = time.time()
-    # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    # mensagemetapa = 'Salvando Arquivo...'
-    # print(mensagemetapa)
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Salvando Arquivo...'
+    print(mensagemetapa)
 
     print(listadicionario)
 

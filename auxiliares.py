@@ -247,6 +247,7 @@ class TrabalhaArquivo:
         self.quantidadelinhas = []
         self.cabecalho = ''
         self.quantcampos = 0
+        self.quantcamposoriginal = 0
         self.separador = ''
         self.cabecalhooriginal = ''
 
@@ -283,8 +284,9 @@ class TrabalhaArquivo:
                 if (left(linha, 1) == separador and right(linha, 1) == separador and quantcampos == 0) or \
                         len(linha.split(separador)) == quantcampos:
                     self.cabecalhooriginal = linha
-                    if adicionafornecedor:
-                        linha = left(linha, len(linha)-1) + separador + 'Fornecedores' + separador
+                    self.quantcamposoriginal = len(linha.split(separador))
+                    # if adicionafornecedor:
+                    #    linha = left(linha, len(linha)-1) + separador + 'Fornecedores' + separador
                     self.quantcampos = len(linha.split(separador))
                     cabecalhoacertado = [campo.strip() for campo in linha.split(separador)]
 
@@ -297,92 +299,68 @@ class TrabalhaArquivo:
                 else:
                     self.precabecalho.append(linha)
 
-    def acertarlinhaquebrada(self, separador='', adicionacabecalho=True, adicionafornecedores=False):
-        """
-        :param adicionafornecedores: se precisa adicionar o campo de fornecedores (e ele será tratado)
-        :param separador: campo de separação.
-        :param adicionacabecalho: se deve incluir o cabeçalho ou não.
-        :return:
-        """
-        try:
-            linhaanterior = ''
-            listalinhascortadas = []
-            listalinhasacertadas = []
+    def acertarlinhaquebrada(self, separador='', adicionarcabecalho=False):
+        linhaanterior = ''
+        listalinhascortadas = []
+        listalinhasacertadas = []
+        if len(self.separador) > 0:
+            separadorlocal = self.separador
+        else:
+            separadorlocal = separador
+        if self.quantcampos > 0:
+            if adicionarcabecalho:
+                if type(self.cabecalho) is not list:
+                    self.listaarquivo.append(separadorlocal.join([campo for campo in self.cabecalho]))
+                else:
+                    self.listaarquivo.append(self.cabecalho)
 
-            if len(self.separador) > 0:
-                separadorlocal = self.separador
-            else:
-                separadorlocal = separador
-            if self.quantcampos > 0:
-                if adicionacabecalho:
-                    if type(self.cabecalho) is not list:
-                        self.listaarquivo.append(self.cabecalho.split(separadorlocal))
-                    else:
-                        cabecalholocal = separadorlocal.join([campo for campo in self.cabecalho])
-                        self.listaarquivo.append(cabecalholocal)
-
-                quantidadelinhasarquivo = self.contarlinhasarq()
-                self.quantidadelinhas.append(quantidadelinhasarquivo)
-
-                with open(self.caminho, 'r', encoding='ANSI') as arquivo:
-                    texto = arquivo.readlines()
-                    with tqdm(total=quantidadelinhasarquivo) as barra_progresso:
-                        for linha in texto:
-                            linhaparaadicionar = []
-                            linha = linha.strip()
-                            barra_progresso.update()
-                            time.sleep(1)
-                            if index_of(linha.replace('|', ''), self.precabecalho) == -1 and linha != self.cabecalhooriginal \
-                                    and linha.split(self.separador) != self.cabecalhooriginal:
-                                if linha.replace(self.separador, '') != '-' * len(linha.replace(self.separador, '')) and mid(
-                                        linha.replace(' ', ''), 2, 1) != '*':
-                                    if (len(linha.split(separadorlocal)) < self.quantcampos and not adicionafornecedores) \
-                                            or (len(linha.split(separadorlocal)) < self.quantcampos-1 and adicionafornecedores):
-                                        if len(linhaanterior) > 0:
-                                            novalinha = linhaanterior + linha
-
-                                        if linhaanterior == '':
-                                            linhaanterior = linha
-
-                                        elif len(novalinha.split(separadorlocal)) > self.quantcampos:
-                                            linhaanterior = ''
-                                            novalinha = ''
-
-                                        elif len(novalinha.split(separadorlocal)) == self.quantcampos:
-                                            listalinhascortadas.append(linhaanterior.split(separadorlocal))
-                                            listalinhascortadas.append(linha.split(separadorlocal))
-                                            listalinhasacertadas.append(novalinha.split(separadorlocal))
-                                            linhaparaadicionar = novalinha.split(separadorlocal)
-                                            novalinha = ''
-                                            linhaanterior = ''
+            quantlinhas = self.contarlinhasarq()
+            self.quantidadelinhas.append(quantlinhas)
+            with open(self.caminho, 'r', encoding='ANSI') as arquivo:
+                texto = arquivo.readlines()
+                with tqdm(total=quantlinhas, unit=' linhas') as barra_progresso:
+                    for linha in texto:
+                        linhaadicionada = ''
+                        linha = linha.strip()
+                        barra_progresso.update()
+                        if index_of(linha, self.precabecalho) != -1 or linha != self.cabecalhooriginal:
+                            if linha != '-' * len(linha) and mid(linha.replace(' ', ''), 2, 1) != '*':
+                                if len(linha.split(separadorlocal)) < self.quantcamposoriginal:
+                                    if len(linhaanterior) > 0:
+                                        novalinha = linhaanterior + linha
+                                    if linhaanterior == '':
+                                        linhaanterior = linha
+                                    elif len(novalinha.split(separadorlocal)) > self.quantcamposoriginal:
+                                        linhaanterior = ''
+                                        novalinha = ''
+                                    elif len(novalinha.split(separadorlocal)) == self.quantcamposoriginal:
+                                        listalinhascortadas.append(linhaanterior.split(separadorlocal))
+                                        listalinhascortadas.append(linha.split(separadorlocal))
+                                        listalinhasacertadas.append(novalinha.split(separadorlocal))
+                                        linhaadicionada = novalinha.split(separadorlocal)
+                                        novalinha = ''
+                                        linhaanterior = ''
+                                else:
+                                    if len(linha.split(separadorlocal)) == self.quantcamposoriginal:
+                                        novalinha = ''
+                                        linhaanterior = ''
+                                        linhaadicionada = linha.split(separadorlocal)
                                     else:
-                                        if len(linha.split(separadorlocal)) == self.quantcampos:
-                                            novalinha = ''
-                                            linhaanterior = ''
-                                        else:
-                                            camposamais = len(linha.split(separadorlocal)) - self.quantcampos
-                                            linhainvertida = linha[::-1]
-                                            linhainvertida = mid(linhainvertida, 2, len(linhainvertida) - 1)
+                                        camposamais = len(linha.split(separadorlocal))-self.quantcamposoriginal
+                                        linhainvertida = linha[::-1]
+                                        linhainvertida = mid(linhainvertida, 2, len(linhainvertida)-1)
+                                        for campos in range(camposamais):
+                                            linhainvertida = linhainvertida.replace(separadorlocal, '\t', 1)
+                                        linhainvertida = '|'+linhainvertida
+                                        linha = linhainvertida[::-1]
+                                        linhaadicionada = linha.split(separadorlocal)
+                                if len(linhaadicionada) > 0:
+                                    linhaadicionada = [campo.strip() for campo in linhaadicionada]
+                                    linhaadicionada = separadorlocal.join(linhaadicionada)
+                                    linhaadicionada = left(linhaadicionada, len(linhaadicionada)-1)
+                                    self.listaarquivo.append(linhaadicionada)
 
-                                            for campos in range(camposamais):
-                                                if separadorlocal != '\t':
-                                                    linhainvertida = linhainvertida.replace(separadorlocal, '\t', 1)
-                                                else:
-                                                    linhainvertida = linhainvertida.replace(separadorlocal, '|', 1)
-
-                                            linhainvertida = '|' + linhainvertida
-                                            linha = linhainvertida[::-1]
-                                        linhaparaadicionar = linha.split(separadorlocal)
-                                    if adicionafornecedores:
-                                        if self.retornaindice('Tipo') != -1 and self.retornaindice('Texto') != -1:
-                                            print(linhaparaadicionar[self.retornaindice('Tipo')], linhaparaadicionar[self.retornaindice('Texto')])
-                                            linhaparaadicionar['Fornecedores'] = listarnumeros(linhaparaadicionar[self.retornaindice('Tipo')],
-                                                                                               linhaparaadicionar[self.retornaindice('Texto')])
-                                    self.listaarquivo.append(linhaparaadicionar)
-
-                    return listalinhascortadas, listalinhasacertadas
-        except Exception as e:
-            messagebox.msgbox(str(e)+chr(13)+'Linha: ' + linha, messagebox.MB_OK, 'Erro')
+                return listalinhascortadas, listalinhasacertadas
 
     def contarlinhasarq(self):
         quantlinha = 0
@@ -416,22 +394,33 @@ class TrabalhaArquivo:
         """
         :return: transforma a lista resultante do arquivo em dicionário com os cabeçalhos.
         """
-        cabecalhoacertado = [campo.strip() for campo in self.cabecalho]
+        if type(self.cabecalho) is list:
+            cabecalhoacertado = [campo.strip() for campo in self.cabecalho]
+        else:
+            cabecalhoacertado = [campo.strip() for campo in self.cabecalho.split(self.separador)]
+
         listofdict = [dict(zip(cabecalhoacertado, line)) for line in self.listaarquivo]
         return listofdict
 
     def retornadf(self, campovalor='', adicionafornecedor=False):
         """
+        :param adicionafornecedor: adiciona o fornecedor.
         :param campovalor: nome do campo a ser tratado como valor (põe em float também)
         :return:
         """
+        from joblib import Parallel, delayed
+
         listafornecedores = []
         # Tira os espaços dos nomes dos cabeçalhos
         inicioetapa = time.time()
         mensagemetapa = 'Acertando Cabeçalho...'
         print(mensagemetapa)
 
-        cabecalhoacertado = [campo.strip() for campo in self.cabecalho]
+        if type(self.cabecalho) is list:
+            cabecalhoacertado = [campo.strip() for campo in self.cabecalho]
+        else:
+            cabecalhoacertado = [campo.strip() for campo in self.cabecalho.split(self.separador)]
+
         # Cria um "data frame" com os dados do arquivo na lista de listas de nome "ListaArquivo" e coloca cada um com o
         # respetivo cabeçalho que está na lista de cabeçalhos
         fimetapa = time.time()
@@ -470,9 +459,10 @@ class TrabalhaArquivo:
 
             totalinhas = len(df.index)
             with tqdm(total=totalinhas) as barra_progresso:
-                for indice, linha in enumerate(df['Tipo']):
-                    listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
-                    barra_progresso.update()
+            #    for indice, linha in enumerate(df['Tipo']):
+            #        listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
+                listafornecedores = Parallel(n_jobs=2)(delayed(listarnumeros(df['Tipo'].values[indice], df['Texto'].values[indice]) for indice, linha in enumerate(df['Tipo'])))
+                barra_progresso.update()
 
             df['Fornecedores'] = listafornecedores
 
