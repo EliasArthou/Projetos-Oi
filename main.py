@@ -12,7 +12,7 @@ from pqdm.threads import pqdm
 
 # from IPython.display import display  # pip install IPython
 
-tupla = ('QD', 'Prov.Var.Camb.s/Juros 0060000000554 R27')
+tupla = ('WW', '600000 wer Forn _345768_4576457_2343567_ R27')
 
 print(aux.listarnumeros(tupla))
 

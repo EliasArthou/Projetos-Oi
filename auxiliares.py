@@ -204,22 +204,23 @@ def listarnumeros(tipo, texto='', transformaremtexto=True):
     """
     if type(tipo) is not tuple:
         tipo = tipo.strip()
-        texto = texto.strip()
+        texto = texto.strip().upper()
     else:
         tipo, texto = tipo
         tipo = tipo.strip()
-        texto = texto.strip()
+        texto = texto.strip().upper()
 
     match tipo:
         case 'WE' | 'AB' | 'D6' | 'RE':
-            lista = re.findall(r'Forn[\D*]*([\d]+)[\D]', texto)
+            lista = re.findall(r'(?<=FORN)*[0-9]{6,7}', texto)
 
         case 'EP' | 'PV':
-            lista = re.findall(r'_([\d]{6,7})_', texto)
+            # lista = re.findall(r'_([\d]{6,7})_*', texto)
+            lista = re.findall(r'(_)(\d{6,7})(_)', texto)
 
         case _:
             # lista = re.findall(r'[\D*]([\d]{6,7})[\D*]', texto)
-            lista = re.findall(r'[\D|\s]([\d]{6,7})[\D+]|[\D|\s]([\d]{6,7})[\D*]', texto)
+            lista = re.findall(r'(?<!\d)(\d{6,7})(?!\d)', texto)
 
     # Verifica se achou números segundo as regras definidas
     if len(lista) > 0:
