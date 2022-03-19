@@ -12,171 +12,105 @@ from pqdm.threads import pqdm
 
 # from IPython.display import display  # pip install IPython
 
+tupla = ('QD', 'Prov.Var.Camb.s/Juros 0060000000554 R27')
 
-try:
-    tabela = 'GIG TESTE FORN'
-    tabelafornecedor = 'GIG Texto Fornecedor'
-    listadicionario = None
-    listafornecedores = []
+print(aux.listarnumeros(tupla))
 
-    pergunta = messagebox.msgbox('Tem colunas de pré-cabeçalho?', messagebox.MB_YESNO,
-                                 'Tratamento de cabeçalho')
-    if pergunta == messagebox.IDYES:
-        quantcolunas = int(messagebox.criarinputbox('Quant. colunas do arquivo', 'Quantas colunas tem o arquivo '
-                                                                                 '(lembrar que o SAP adiciona 2 colunas a '
-                                                                                 'mais)?'))
-        if int(quantcolunas) < 4 or not str(quantcolunas).isnumeric():
-            messagebox.msgbox('Valor inválido', messagebox.MB_OK, 'Valor inválido informado!')
-            sys.exit()
-    else:
-        quantcolunas = 0
+"""
+#try:
+tabela = 'GIG TESTE FORN'
+tabelafornecedor = 'GIG Texto Fornecedor'
+listadicionario = None
+listafornecedores = []
 
-    tratarfornecedor = True
-    arquivo_caminho_origem = aux.caminhoselecionado(3, 'Arquivos a Tratar')
-    if len(arquivo_caminho_origem) == 0:
-        messagebox.msgbox('Selecionar a pasta com os arquivos a serem tratados', messagebox.MB_OK,
-                          'Caminho dos Arquivos a Tratar não selecionado')
+pergunta = messagebox.msgbox('Tem colunas de pré-cabeçalho?', messagebox.MB_YESNO,
+                             'Tratamento de cabeçalho')
+if pergunta == messagebox.IDYES:
+    quantcolunas = int(messagebox.criarinputbox('Quant. colunas do arquivo', 'Quantas colunas tem o arquivo '
+                                                                             '(lembrar que o SAP adiciona 2 colunas a '
+                                                                             'mais)?'))
+    if int(quantcolunas) < 4 or not str(quantcolunas).isnumeric():
+        messagebox.msgbox('Valor inválido', messagebox.MB_OK, 'Valor inválido informado!')
         sys.exit()
+else:
+    quantcolunas = 0
 
-    resultado = 0
+tratarfornecedor = True
+arquivo_caminho_origem = aux.caminhoselecionado(3, 'Arquivos a Tratar')
+if len(arquivo_caminho_origem) == 0:
+    messagebox.msgbox('Selecionar a pasta com os arquivos a serem tratados', messagebox.MB_OK,
+                      'Caminho dos Arquivos a Tratar não selecionado')
+    sys.exit()
 
-    arquivo_caminho_destino = aux.caminhoselecionado(3, 'Lugar para Arquivos Tratados')
-    if len(arquivo_caminho_destino) == 0:
-        messagebox.msgbox('Selecionar a pasta onde os arquivos tratados serão salvos', messagebox.MB_OK,
-                          'Caminho Destino dos Arquivos Tratados não selecionado')
-        sys.exit()
+resultado = 0
 
-    tempoinicio = time.time()
+arquivo_caminho_destino = aux.caminhoselecionado(3, 'Lugar para Arquivos Tratados')
+if len(arquivo_caminho_destino) == 0:
+    messagebox.msgbox('Selecionar a pasta onde os arquivos tratados serão salvos', messagebox.MB_OK,
+                      'Caminho Destino dos Arquivos Tratados não selecionado')
+    sys.exit()
 
-    # Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
+tempoinicio = time.time()
 
-    for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
-        objarquivo = aux.TrabalhaArquivo(arquivo)
-        inicioetapa = time.time()
-        mensagemetapa = 'Verificando Cabeçalho...'
-        print(mensagemetapa)
+# Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
 
-        objarquivo.verificacabecalho('|', quantcolunas, True, True)
+for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
+    objarquivo = aux.TrabalhaArquivo(arquivo)
+    inicioetapa = time.time()
+    mensagemetapa = 'Verificando Cabeçalho...'
+    print(mensagemetapa)
 
-        fimetapa = time.time()
-        inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Tratando Linha Quebrada...'
-        print(mensagemetapa)
-        linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|')
-
-        fimetapa = time.time()
-        inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Acertando Valor...'
-        print(mensagemetapa)
-
-        listadicionario = objarquivo.retornadf('Mont.em MI')
-
-        # Processamento Paralelo 2
-        fimetapa = time.time()
-        inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Preparando Carga de Fornecedor...'
-        print(mensagemetapa)
-
-        dfcut = listadicionario[['Tipo', 'Texto']]
-        argumentos = [tuple(x) for x in dfcut.to_numpy()]
-        fimetapa = time.time()
-        inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Adicionando coluna Fornecedor...'
-        print(mensagemetapa)
-        # listafornecedores = pqdm(argumentos, aux.listarnumeros, n_jobs=2, unit=' linhas')
-        listadicionario['Fornecedores'] = listafornecedores
-
-        fimetapa = time.time()
-        inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Salvando Arquivo...'
-        print(mensagemetapa)
-
-        print(listadicionario)
-
-    listadicionario.to_csv(arquivo_caminho_destino+'\\pandas.txt', index=None, sep='|', mode='a')
+    objarquivo.verificacabecalho('|', quantcolunas, True)
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Tratando Linha Quebrada...'
+    print(mensagemetapa)
+    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|')
 
-    tempofim = time.time()
-    tempototal = tempofim - tempoinicio
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Acertando Valor...'
+    print(mensagemetapa)
 
-    hours, rem = divmod(tempototal, 3600)
-    minutes, seconds = divmod(rem, 60)
+    listadicionario = objarquivo.retornadf('Mont.em MI')
 
-    messagebox.msgbox(
-        f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
-        messagebox.MB_OK, 'Tempo Decorrido')
+    # Processamento Paralelo 2
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Preparando Carga de Fornecedor...'
+    print(mensagemetapa)
+    print('')
+    dfcut = listadicionario[['Tipo', 'Texto']]
+    argumentos = [tuple(x) for x in dfcut.to_numpy()]
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Adicionando coluna Fornecedor...'
+    print(mensagemetapa)
+    listafornecedores = pqdm(argumentos, aux.listarnumeros, n_jobs=2, unit=' linhas')
+    listadicionario['Fornecedores'] = listafornecedores
 
-    sys.exit()
-    """
-        caminhosalvo, caminhofornec = objarquivo.salvar_arquivo(arquivo_caminho_destino, tratarfornecedor)
-    
-        caminhoerro = caminhosalvo.upper()
-        caminhoerro = caminhoerro.replace('.TXT', '.ERR')
-        caminholog = caminhosalvo.upper()
-        caminholog = caminholog.replace('.TXT', '.LOG')
-        tempopergunta = time.time()
-        # [GIG Analise Compromisso]
-    
-        # tabela = 'GIG OPEX Entrada Compromisso Ex Carga'
-        if len(caminhofornec) > 0:
-            caminhoerrofornec = caminhofornec.upper()
-            caminhoerrofornec = caminhoerrofornec.replace('.TXT', '.ERR')
-            caminhologfornec = caminhofornec.upper()
-            caminhologfornec = caminhologfornec.replace('.TXT', '.LOG')
-    
-        tempopergunta = time.time()
-        if resultado == 0:
-            resultado = messagebox.msgbox('Subir pro banco?', messagebox.MB_YESNO, 'Carga SQL')
-        temporesposta = time.time()
-        if resultado == messagebox.IDYES:
-            if len(tabela) == 0:
-                tabela = messagebox.criarinputbox('Tabela Banco', 'Digite a tabela a ser carregada:')
-    
-            if len(tabela) > 0:
-                # Posterior criação de verificação de quantidade de campos e se a tabela existe
-                # (posso criar uma verificação de tipos dos campos também)
-                if len(caminhofornec) > 0:
-                    if len(tabelafornecedor) == 0:
-                        tabelafornecedor = messagebox.criarinputbox('Tabela Banco',
-                                                                    'Digite a tabela de fornecedor a ser carregada:')
-    
-                if len(tabela) > 0 and ((len(caminhofornec) > 0 and len(tabelafornecedor) > 0) or len(caminhofornec) == 0):
-                    os.system('bcp ' + conf.schema + '."[' + tabela + ']" IN "'
-                              + caminhosalvo + '" -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' +
-                              conf.endbanco + ' -U ' + conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d '
-                              + conf.nomebanco + ' -e "' + caminhoerro + '" -F 2 > "' + caminholog + '"')
-                    if len(caminhofornec) > 0:
-                        os.system('bcp ' + conf.schema + '."[' + tabelafornecedor + ']" IN "' + caminhofornec +
-                                  '" -t "|" -C SQL_Latin1_General_CP1_CI_AS -c -S ' + conf.endbanco + ' -U ' +
-                                  conf.usrbanco + ' -P ' + conf.pwdbanco + ' -d ' + conf.nomebanco + ' -e "' +
-                                  caminhoerrofornec + '" -F 2 > "' + caminhologfornec + '"')
-            else:
-                messagebox.msgbox('Valor inválido', messagebox.MB_OK, 'Nome da tabela não informado!')
-                sys.exit()
-    
-    tempofim = time.time()
-    
-    if tratarfornecedor:
-        tempototal = (tempopergunta - tempoinicio) + (tempofim - temporesposta)
-    else:
-        tempototal = tempofim - tempoinicio
-    
-    hours, rem = divmod(tempototal, 3600)
-    minutes, seconds = divmod(rem, 60)
-    
-    messagebox.msgbox(
-        f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
-        messagebox.MB_OK, 'Tempo Decorrido')
-    """
-except Exception as e:
-    tempofim = time.time()
-    tempototal = tempofim - tempoinicio
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Salvando Arquivo...'
+    print(mensagemetapa)
 
-    hours, rem = divmod(tempototal, 3600)
-    minutes, seconds = divmod(rem, 60)
+    print(listadicionario)
 
-    messagebox.msgbox(str(e)+chr(13)+f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
-                      messagebox.MB_OK, 'Tempo Decorrido')
-    sys.exit()
+listadicionario.to_csv(arquivo_caminho_destino+'\\pandas.txt', index=None, sep='|', mode='a')
+
+fimetapa = time.time()
+inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+
+tempofim = time.time()
+tempototal = tempofim - tempoinicio
+
+hours, rem = divmod(tempototal, 3600)
+minutes, seconds = divmod(rem, 60)
+
+messagebox.msgbox(
+    f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
+    messagebox.MB_OK, 'Tempo Decorrido')
+
+sys.exit()
+"""

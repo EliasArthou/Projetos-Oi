@@ -206,8 +206,9 @@ def listarnumeros(tipo, texto='', transformaremtexto=True):
         tipo = tipo.strip()
         texto = texto.strip()
     else:
-        tipo = tipo[0]
-        texto = tipo[1]
+        tipo, texto = tipo
+        tipo = tipo.strip()
+        texto = texto.strip()
 
     match tipo:
         case 'WE' | 'AB' | 'D6' | 'RE':
@@ -217,14 +218,19 @@ def listarnumeros(tipo, texto='', transformaremtexto=True):
             lista = re.findall(r'_([\d]{6,7})_', texto)
 
         case _:
-            lista = re.findall(r'[\D]([\d]{6,7})[\D]', texto)
+            # lista = re.findall(r'[\D*]([\d]{6,7})[\D*]', texto)
+            lista = re.findall(r'[\D|\s]([\d]{6,7})[\D+]|[\D|\s]([\d]{6,7})[\D*]', texto)
 
     # Verifica se achou números segundo as regras definidas
     if len(lista) > 0:
         # Tira o espaço dos números encontrados no campo
-        lista = [linha.strip() for linha in lista]
-        # Tira as duplicatas (caso tenha)
         lista = list(set(lista))
+        lista = [linha.strip().lstrip('0') for linha in lista]
+        # Tira as duplicatas (caso tenha)
+        # lista = list(set(lista))
+        for linha in lista:
+            if len(linha) < 6:
+                lista.remove(linha)
 
     if transformaremtexto:
         listatemp = lista
