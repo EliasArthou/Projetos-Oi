@@ -7,11 +7,6 @@ import pandas as pd
 import time
 from tqdm import tqdm
 
-import pypyodbc
-
-import messagebox
-import sensiveis as pwd
-
 
 def caminhospadroes(caminho):
     """
@@ -200,16 +195,19 @@ def index_of(val, in_list):
         return -1
 
 
-def listarnumeros(tipo, texto, transformaremtexto=True):
+def listarnumeros(tipo, texto='', transformaremtexto=True):
     """
     :param transformaremtexto: transformar a lista em texto.
     :param tipo: tipo do lançamento.
     :param texto: texto para extrair os números.
     :return:
     """
-    tipo = tipo.strip()
-
-    texto = texto.strip()
+    if type(tipo) is not tuple:
+        tipo = tipo.strip()
+        texto = texto.strip()
+    else:
+        tipo = tipo[0]
+        texto = tipo[1]
 
     match tipo:
         case 'WE' | 'AB' | 'D6' | 'RE':
@@ -240,6 +238,7 @@ class TrabalhaArquivo:
     """
     Classe para tratamento de arquivo.
     """
+
     def __init__(self, caminho):
         self.caminho = caminho
         self.precabecalho = []
@@ -266,7 +265,7 @@ class TrabalhaArquivo:
         else:
             return -1
 
-    def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False, adicionafornecedor=False):
+    def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False):
         """
         :param adicionafornecedor: se adiciona o campo fornecedor no cabeçalho.
         :param separador: caracter de separação.
@@ -346,12 +345,12 @@ class TrabalhaArquivo:
                                         linhaanterior = ''
                                         linhaadicionada = linha.split(separadorlocal)
                                     else:
-                                        camposamais = len(linha.split(separadorlocal))-self.quantcamposoriginal
+                                        camposamais = len(linha.split(separadorlocal)) - self.quantcamposoriginal
                                         linhainvertida = linha[::-1]
-                                        linhainvertida = mid(linhainvertida, 2, len(linhainvertida)-1)
+                                        linhainvertida = mid(linhainvertida, 2, len(linhainvertida) - 1)
                                         for campos in range(camposamais):
                                             linhainvertida = linhainvertida.replace(separadorlocal, '\t', 1)
-                                        linhainvertida = '|'+linhainvertida
+                                        linhainvertida = '|' + linhainvertida
                                         linha = linhainvertida[::-1]
                                         linhaadicionada = linha.split(separadorlocal)
                                 if len(linhaadicionada) > 0:
@@ -402,20 +401,18 @@ class TrabalhaArquivo:
         listofdict = [dict(zip(cabecalhoacertado, line)) for line in self.listaarquivo]
         return listofdict
 
-    def retornadf(self, campovalor='', adicionafornecedor=False):
+    def retornadf(self, campovalor=''):
         """
         :param adicionafornecedor: adiciona o fornecedor.
         :param campovalor: nome do campo a ser tratado como valor (põe em float também)
         :return:
         """
-        from joblib import Parallel, delayed
+        # Processamento Paralelo
+        # from joblib import Parallel, delayed
 
-        listafornecedores = []
-        # Tira os espaços dos nomes dos cabeçalhos
         inicioetapa = time.time()
-        mensagemetapa = 'Acertando Cabeçalho...'
-        print(mensagemetapa)
-
+        mensagemetapa = 'Acertando cabecalho...'
+        # Tira os espaços dos nomes dos cabeçalhos
         if type(self.cabecalho) is list:
             cabecalhoacertado = [campo.strip() for campo in self.cabecalho]
         else:
@@ -440,6 +437,9 @@ class TrabalhaArquivo:
         df.replace('', nan_value, inplace=True)
         # Apaga a coluna que só tem informações sem valor
         df.dropna(how='all', axis=1, inplace=True)
+        # Renova os cabeçalhos das colunas (caso mude)
+        if self.cabecalho != list(df.columns):
+            self.cabecalho = list(df.columns)
         # Devolve o vazio padrão para as células vazias
         df.replace(nan_value, '', inplace=True)
 
@@ -451,20 +451,16 @@ class TrabalhaArquivo:
         if len(campovalor) > 0:
             df[campovalor] = df[campovalor].apply(acertavalor)
 
-        if adicionafornecedor:
-            fimetapa = time.time()
-            inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-            mensagemetapa = 'Adicionando coluna Fornecedor...'
-            print(mensagemetapa)
-
+        # if adicionafornecedor:
+            # Processamento sequencial
             # totalinhas = len(df.index)
             # with tqdm(total=totalinhas, unit=' linhas') as barra_progresso:
-                # for indice, linha in enumerate(df['Tipo']):
-                #    listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
-            listafornecedores = Parallel(n_jobs=3)(delayed(listarnumeros)(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice]) for indice, linha in enumerate(df['Tipo']))
-                #    barra_progresso.update()
+            # for indice, linha in enumerate(df['Tipo']):
+            #    listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
+            #    barra_progresso.update()
 
-            df['Fornecedores'] = listafornecedores
+            # Processamento Paralelo
+            # listafornecedores = Parallel(n_jobs=3)(delayed(listarnumeros)(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice]) for indice, linha in enumerate(df['Tipo']))
 
         fimetapa = time.time()
         inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
@@ -502,7 +498,7 @@ def to_raw(string):
 
 
 def tratatempo(inicioetapa, fimetapa, mensagemetapa):
-    tempoetapa = fimetapa-inicioetapa
+    tempoetapa = fimetapa - inicioetapa
     hours, rem = divmod(tempoetapa, 3600)
     minutes, seconds = divmod(rem, 60)
     print(mensagemetapa + " " + f'{"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}')
