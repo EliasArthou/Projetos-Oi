@@ -12,7 +12,7 @@ from pqdm.threads import pqdm
 
 # from IPython.display import display  # pip install IPython
 
-tupla = ('WW', '600000 wer Forn _345768_4576457_2343567_ R27')
+tupla = ('WE', 'Fornecedor: 234556 _345768_654556764_2343567_ R27')
 
 print(aux.listarnumeros(tupla))
 

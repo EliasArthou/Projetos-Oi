@@ -212,14 +212,12 @@ def listarnumeros(tipo, texto='', transformaremtexto=True):
 
     match tipo:
         case 'WE' | 'AB' | 'D6' | 'RE':
-            lista = re.findall(r'(?<=FORN)*[0-9]{6,7}', texto)
+            lista = re.findall(r'(?<=FORN)\D*.([\d]{6,7})', texto)
 
         case 'EP' | 'PV':
-            # lista = re.findall(r'_([\d]{6,7})_*', texto)
-            lista = re.findall(r'(_)(\d{6,7})(_)', texto)
+            lista = re.findall(r'_([\d]{6,7})_', texto.replace('_', '__'))
 
         case _:
-            # lista = re.findall(r'[\D*]([\d]{6,7})[\D*]', texto)
             lista = re.findall(r'(?<!\d)(\d{6,7})(?!\d)', texto)
 
     # Verifica se achou números segundo as regras definidas
