@@ -195,8 +195,9 @@ def index_of(val, in_list):
         return -1
 
 
-def listarnumeros(tipo, texto='', transformaremtexto=True):
+def listarnumeros(tipo, texto='', transformaremtexto=True, retornarquantidade=True):
     """
+    # :param retornarquantidade: retorna a quantidade de fornecedor por linha.
     :param transformaremtexto: transformar a lista em texto.
     :param tipo: tipo do lançamento.
     :param texto: texto para extrair os números.
@@ -212,31 +213,52 @@ def listarnumeros(tipo, texto='', transformaremtexto=True):
 
     match tipo:
         case 'WE' | 'AB' | 'D6' | 'RE':
-            lista = re.findall(r'(?<=FORN)\D*.([\d]{6,7})', texto)
+            lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})[^0-9]?', texto)
 
         case 'EP' | 'PV':
             lista = re.findall(r'_([\d]{6,7})_', texto.replace('_', '__'))
 
         case _:
-            lista = re.findall(r'(?<!\d)(\d{6,7})(?!\d)', texto)
+            if 'FORN' not in texto:
+                # lista = re.findall(r'(?<!\d)(\d{6})(?!\d)', texto)
+                # lista = lista + re.findall(r'(?<!\d)(\d{7})(?!\d)', texto)
+                # lista = re.findall(r'[^|\D](\d{6,7})[\D|$]', texto)
+                listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
+                if len(listatemp) > 0:
+                    lista = [item for t in listatemp for item in t]
+                # lista = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+', texto)
+                # lista = lista + re.findall(r'^(\d{6,7})[^0-9]+', texto)
+                # lista = lista + re.findall(r'[^0-9]+(\d{6,7})$', texto)
+                # lista = lista + re.findall(r'^(\d{6,7})$', texto)
+
+            else:
+                lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})([^0-9]?)', texto)
 
     # Verifica se achou números segundo as regras definidas
     if len(lista) > 0:
-        # Tira o espaço dos números encontrados no campo
-        lista = list(set(lista))
-        lista = [linha.strip().lstrip('0') for linha in lista]
         # Tira as duplicatas (caso tenha)
-        # lista = list(set(lista))
+        lista = list(set(lista))
+        # Tira o espaço dos números encontrados no campo
+        lista = [linha.strip().lstrip('0') for linha in lista]
+
         for linha in lista:
-            if len(linha) < 6:
+            if len(linha) < 6 or len(linha) > 7:
                 lista.remove(linha)
 
-    if transformaremtexto:
-        listatemp = lista
-        lista = ', '
-        lista = lista.join(listatemp)
+    if retornarquantidade:
+        listaquant = len(lista)
+        if transformaremtexto:
+            listatemp = lista
+            lista = ', '
+            lista = lista.join(listatemp)
+        return lista, listaquant
+    else:
+        if transformaremtexto:
+            listatemp = lista
+            lista = ', '
+            lista = lista.join(listatemp)
 
-    return lista
+        return lista
 
 
 class TrabalhaArquivo:
@@ -272,7 +294,6 @@ class TrabalhaArquivo:
 
     def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False):
         """
-        :param adicionafornecedor: se adiciona o campo fornecedor no cabeçalho.
         :param separador: caracter de separação.
         :param quantcampos: quantidade de campos.
         :param quebracabecalho: se o cabeçalho desse ser lista ou "string".
@@ -289,8 +310,6 @@ class TrabalhaArquivo:
                         len(linha.split(separador)) == quantcampos:
                     self.cabecalhooriginal = linha
                     self.quantcamposoriginal = len(linha.split(separador))
-                    # if adicionafornecedor:
-                    #    linha = left(linha, len(linha)-1) + separador + 'Fornecedores' + separador
                     self.quantcampos = len(linha.split(separador))
                     cabecalhoacertado = [campo.strip() for campo in linha.split(separador)]
 
@@ -406,7 +425,7 @@ class TrabalhaArquivo:
         listofdict = [dict(zip(cabecalhoacertado, line)) for line in self.listaarquivo]
         return listofdict
 
-    def retornadf(self, campovalor=''):
+    def retornadf(self, campovalor='', adicionafornecedor=True):
         """
         :param adicionafornecedor: adiciona o fornecedor.
         :param campovalor: nome do campo a ser tratado como valor (põe em float também)
@@ -414,6 +433,8 @@ class TrabalhaArquivo:
         """
         # Processamento Paralelo
         # from joblib import Parallel, delayed
+        # Processamento Paralelo 2
+        from pqdm.threads import pqdm
 
         inicioetapa = time.time()
         mensagemetapa = 'Acertando cabecalho...'
@@ -456,7 +477,7 @@ class TrabalhaArquivo:
         if len(campovalor) > 0:
             df[campovalor] = df[campovalor].apply(acertavalor)
 
-        # if adicionafornecedor:
+        if adicionafornecedor:
             # Processamento sequencial
             # totalinhas = len(df.index)
             # with tqdm(total=totalinhas, unit=' linhas') as barra_progresso:
@@ -466,6 +487,29 @@ class TrabalhaArquivo:
 
             # Processamento Paralelo
             # listafornecedores = Parallel(n_jobs=3)(delayed(listarnumeros)(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice]) for indice, linha in enumerate(df['Tipo']))
+            # Processamento Paralelo 2
+            fimetapa = time.time()
+            inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
+            mensagemetapa = 'Preparando Carga de Fornecedor...'
+            print(mensagemetapa)
+            dfcut = df[['Tipo', 'Texto']]
+            argumentos = [tuple(x) for x in dfcut.to_numpy()]
+            fimetapa = time.time()
+            inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
+            time.sleep(1)
+            mensagemetapa = 'Adicionando coluna Fornecedor...'
+            print(mensagemetapa)
+            time.sleep(1)
+            listafornecedores = pqdm(argumentos, listarnumeros, n_jobs=2, unit=' linhas')
+            if len(listafornecedores) > 0:
+                if listafornecedores[0] is tuple:
+                    listatemp = [list(x) for x in listafornecedores]
+                    listafornecedores = []
+                    listafornecedores, quantfornecedores = map(list, zip(*listatemp))
+                    df['Fornecedores'] = listafornecedores
+                    df['Quant Fornecedores'] = quantfornecedores
+                else:
+                    df['Fornecedores'] = listafornecedores
 
         fimetapa = time.time()
         inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)

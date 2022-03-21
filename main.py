@@ -7,16 +7,10 @@ import messagebox
 import auxiliares as aux
 import sys
 
-# Processamento Paralelo 2
-from pqdm.threads import pqdm
-
 # from IPython.display import display  # pip install IPython
 
-tupla = ('WE', 'Fornecedor: 234556 _345768_654556764_2343567_ R27')
 
-print(aux.listarnumeros(tupla))
 
-"""
 #try:
 tabela = 'GIG TESTE FORN'
 tabelafornecedor = 'GIG Texto Fornecedor'
@@ -75,21 +69,6 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
 
     listadicionario = objarquivo.retornadf('Mont.em MI')
 
-    # Processamento Paralelo 2
-    fimetapa = time.time()
-    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    mensagemetapa = 'Preparando Carga de Fornecedor...'
-    print(mensagemetapa)
-    print('')
-    dfcut = listadicionario[['Tipo', 'Texto']]
-    argumentos = [tuple(x) for x in dfcut.to_numpy()]
-    fimetapa = time.time()
-    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    mensagemetapa = 'Adicionando coluna Fornecedor...'
-    print(mensagemetapa)
-    listafornecedores = pqdm(argumentos, aux.listarnumeros, n_jobs=2, unit=' linhas')
-    listadicionario['Fornecedores'] = listafornecedores
-
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
     mensagemetapa = 'Salvando Arquivo...'
@@ -98,6 +77,8 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     print(listadicionario)
 
 listadicionario.to_csv(arquivo_caminho_destino+'\\pandas.txt', index=None, sep='|', mode='a')
+
+del listadicionario
 
 fimetapa = time.time()
 inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
@@ -111,6 +92,3 @@ minutes, seconds = divmod(rem, 60)
 messagebox.msgbox(
     f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
     messagebox.MB_OK, 'Tempo Decorrido')
-
-sys.exit()
-"""
