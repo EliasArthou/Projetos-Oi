@@ -6,6 +6,7 @@ import re
 import pandas as pd
 import time
 from tqdm import tqdm
+import psutil
 
 
 def caminhospadroes(caminho):
@@ -203,6 +204,7 @@ def listarnumeros(tipo, texto='', transformaremtexto=True, retornarquantidade=Tr
     :param texto: texto para extrair os números.
     :return:
     """
+    lista = []
     if type(tipo) is not tuple:
         tipo = tipo.strip()
         texto = texto.strip().upper()
@@ -213,23 +215,22 @@ def listarnumeros(tipo, texto='', transformaremtexto=True, retornarquantidade=Tr
 
     match tipo:
         case 'WE' | 'AB' | 'D6' | 'RE':
-            lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})[^0-9]?', texto)
+            # lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})[^0-9]?', texto)
+            lista = re.findall(r'FORN[^0-9]*(\d{6,7})[^0-9]+', texto)
+            lista = lista + re.findall(r'FORN[^0-9]*(\d{6,7})$', texto)
 
         case 'EP' | 'PV':
             lista = re.findall(r'_([\d]{6,7})_', texto.replace('_', '__'))
 
         case _:
             if 'FORN' not in texto:
-                # lista = re.findall(r'(?<!\d)(\d{6})(?!\d)', texto)
-                # lista = lista + re.findall(r'(?<!\d)(\d{7})(?!\d)', texto)
-                # lista = re.findall(r'[^|\D](\d{6,7})[\D|$]', texto)
-                listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
-                if len(listatemp) > 0:
-                    lista = [item for t in listatemp for item in t]
-                # lista = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+', texto)
-                # lista = lista + re.findall(r'^(\d{6,7})[^0-9]+', texto)
-                # lista = lista + re.findall(r'[^0-9]+(\d{6,7})$', texto)
-                # lista = lista + re.findall(r'^(\d{6,7})$', texto)
+                # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
+                # if len(listatemp) > 0:
+                #     lista = [item for t in listatemp for item in t]
+                lista = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+', texto)
+                lista = lista + re.findall(r'^(\d{6,7})[^0-9]+', texto)
+                lista = lista + re.findall(r'[^0-9]+(\d{6,7})$', texto)
+                lista = lista + re.findall(r'^(\d{6,7})$', texto)
 
             else:
                 lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})([^0-9]?)', texto)
@@ -397,7 +398,6 @@ class TrabalhaArquivo:
     def salvar_arquivo(self, destino):
         """
         :param destino: caminho de destino dos arquivos.
-        :param tratarfornecedor: se tem que fazer o arquivo de fornecedor ou não.
         :return:
         """
         linhatemp = ''
@@ -496,15 +496,15 @@ class TrabalhaArquivo:
             argumentos = [tuple(x) for x in dfcut.to_numpy()]
             fimetapa = time.time()
             inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-            time.sleep(1)
             mensagemetapa = 'Adicionando coluna Fornecedor...'
             print(mensagemetapa)
             time.sleep(1)
-            listafornecedores = pqdm(argumentos, listarnumeros, n_jobs=2, unit=' linhas')
+            nucleosusados = int(psutil.cpu_count() * 0.25) if int(psutil.cpu_count() * 0.25) > 2 else 2
+            listafornecedores = pqdm(argumentos, listarnumeros, n_jobs=nucleosusados, unit=' linhas')
             if len(listafornecedores) > 0:
-                if listafornecedores[0] is tuple:
+                if type(listafornecedores[0]) is tuple:
+                    print([list(x) for x in listafornecedores])
                     listatemp = [list(x) for x in listafornecedores]
-                    listafornecedores = []
                     listafornecedores, quantfornecedores = map(list, zip(*listatemp))
                     df['Fornecedores'] = listafornecedores
                     df['Quant Fornecedores'] = quantfornecedores

@@ -10,8 +10,7 @@ import sys
 # from IPython.display import display  # pip install IPython
 
 
-
-#try:
+# try:
 tabela = 'GIG TESTE FORN'
 tabelafornecedor = 'GIG Texto Fornecedor'
 listadicionario = None
