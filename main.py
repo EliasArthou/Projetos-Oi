@@ -6,11 +6,12 @@ import time
 import messagebox
 import auxiliares as aux
 import sys
+import pandas as pd
 
 # from IPython.display import display  # pip install IPython
 
-
 # try:
+
 tabela = 'GIG TESTE FORN'
 tabelafornecedor = 'GIG Texto Fornecedor'
 listadicionario = None
@@ -73,7 +74,7 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     mensagemetapa = 'Salvando Arquivo...'
     print(mensagemetapa)
 
-    print(listadicionario)
+    # print(listadicionario.groupby(['Quant Fornecedores']).count())
 
 listadicionario.to_csv(arquivo_caminho_destino+'\\pandas.txt', index=None, sep='|', mode='a')
 

@@ -1,12 +1,35 @@
 """
 Funções Auxiliares
 """
+import os
 import os.path
 import re
 import pandas as pd
 import time
 from tqdm import tqdm
 import psutil
+import pypyodbc
+import sensiveis as senha
+# import modin.pandas as pd
+
+
+def retornarconsulta(tabela, campos=[], filtros=''):
+    cnx = pypyodbc.connect(
+        'DRIVER={SQL Server};SERVER=' + senha.endbanco + ';DATABASE=' + senha.nomebanco + ';UID=' + senha.usrbanco + ';PWD=' + senha.pwdbanco)
+    if len(campos) > 0:
+        separador = ', '
+        campos = separador.join(campos)
+        campos = ' ' + campos + ' '
+    else:
+        campos = ' * '
+
+    busca = 'SELECT' + campos + ' FROM ' + '[' + tabela + ']' + filtros
+
+    cursor = cnx.cursor()
+    cursor.execute(busca)
+    retorno = cursor.fetchall()
+
+    return retorno
 
 
 def caminhospadroes(caminho):
@@ -196,72 +219,6 @@ def index_of(val, in_list):
         return -1
 
 
-def listarnumeros(tipo, texto='', transformaremtexto=True, retornarquantidade=True):
-    """
-    # :param retornarquantidade: retorna a quantidade de fornecedor por linha.
-    :param transformaremtexto: transformar a lista em texto.
-    :param tipo: tipo do lançamento.
-    :param texto: texto para extrair os números.
-    :return:
-    """
-    lista = []
-    if type(tipo) is not tuple:
-        tipo = tipo.strip()
-        texto = texto.strip().upper()
-    else:
-        tipo, texto = tipo
-        tipo = tipo.strip()
-        texto = texto.strip().upper()
-
-    match tipo:
-        case 'WE' | 'AB' | 'D6' | 'RE':
-            # lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})[^0-9]?', texto)
-            lista = re.findall(r'FORN[^0-9]*(\d{6,7})[^0-9]+', texto)
-            lista = lista + re.findall(r'FORN[^0-9]*(\d{6,7})$', texto)
-
-        case 'EP' | 'PV':
-            lista = re.findall(r'_([\d]{6,7})_', texto.replace('_', '__'))
-
-        case _:
-            if 'FORN' not in texto:
-                # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
-                # if len(listatemp) > 0:
-                #     lista = [item for t in listatemp for item in t]
-                lista = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+', texto)
-                lista = lista + re.findall(r'^(\d{6,7})[^0-9]+', texto)
-                lista = lista + re.findall(r'[^0-9]+(\d{6,7})$', texto)
-                lista = lista + re.findall(r'^(\d{6,7})$', texto)
-
-            else:
-                lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})([^0-9]?)', texto)
-
-    # Verifica se achou números segundo as regras definidas
-    if len(lista) > 0:
-        # Tira as duplicatas (caso tenha)
-        lista = list(set(lista))
-        # Tira o espaço dos números encontrados no campo
-        lista = [linha.strip().lstrip('0') for linha in lista]
-
-        for linha in lista:
-            if len(linha) < 6 or len(linha) > 7:
-                lista.remove(linha)
-
-    if retornarquantidade:
-        listaquant = len(lista)
-        if transformaremtexto:
-            listatemp = lista
-            lista = ', '
-            lista = lista.join(listatemp)
-        return lista, listaquant
-    else:
-        if transformaremtexto:
-            listatemp = lista
-            lista = ', '
-            lista = lista.join(listatemp)
-
-        return lista
-
-
 class TrabalhaArquivo:
     """
     Classe para tratamento de arquivo.
@@ -277,6 +234,7 @@ class TrabalhaArquivo:
         self.quantcamposoriginal = 0
         self.separador = ''
         self.cabecalhooriginal = ''
+        self.arvore = None
 
     def retornaindice(self, textocabecalho):
         """
@@ -292,6 +250,114 @@ class TrabalhaArquivo:
             return indice
         else:
             return -1
+
+    def preencherarvore(self):
+        colunas = ['Conta', '[Pacote N3]']
+        retorno = retornarconsulta('GIG Arvores Conta', colunas, " WHERE [Pacote N1]='02 - Despesas'")
+        if len(retorno) > 0:
+            dfarvore = pd.DataFrame.from_records(retorno, columns=colunas)
+            self.arvore = dfarvore
+            # self.arvore = dfarvore.values.tolist()
+
+    def listarnumeros(self, tipo, fornecedor='', texto='', conta='', transformaremtexto=True, retornarquantidade=True):
+        """
+        :param fornecedor: campo forncedor da lista.
+        :param retornarquantidade: retorna a quantidade de fornecedor por linha.
+        :param conta: conta da linha.
+        :param transformaremtexto: transformar a lista em texto.
+        :param tipo: tipo do lançamento.
+        :param texto: texto para extrair os números.
+        :return:
+        """
+        if self.arvore is None:
+            self.preencherarvore()
+
+        lista = []
+        if type(tipo) is not tuple:
+            tipo = tipo.strip()
+            fornecedor = fornecedor.strip()
+            texto = texto.strip().upper()
+            conta = conta.strip()
+        else:
+            tipo, texto, conta = tipo
+            tipo = tipo.strip()
+            fornecedor = fornecedor.strip()
+            texto = texto.strip().upper()
+            conta = conta.strip()
+
+        if len(fornecedor) == 0:
+            match tipo:
+                case 'WE' | 'AB' | 'D6' | 'RE':
+                    # lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})[^0-9]?', texto)
+                    lista = re.findall(r'FORN[^0-9]*(\d{6,7})[^0-9]+', texto)
+                    lista = lista + re.findall(r'FORN[^0-9]*(\d{6,7})$', texto)
+
+                case 'EP' | 'PV':
+                    lista = re.findall(r'_([\d]{6,7})_', texto.replace('_', '__'))
+
+                case _:
+                    if 'FORN' not in texto:
+                        # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
+                        # if len(listatemp) > 0:
+                        #     lista = [item for t in listatemp for item in t]
+                        lista = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+', texto)
+                        lista = lista + re.findall(r'^(\d{6,7})[^0-9]+', texto)
+                        lista = lista + re.findall(r'[^0-9]+(\d{6,7})$', texto)
+                        lista = lista + re.findall(r'^(\d{6,7})$', texto)
+
+                    else:
+                        lista = re.findall(r'FORN[^0-9]*(\d{6,7})[^0-9]+', texto)
+                        lista = lista + re.findall(r'FORN[^0-9]*(\d{6,7})$', texto)
+        else:
+            lista = fornecedor
+
+        # Verifica se achou números segundo as regras definidas
+        if len(lista) > 0:
+            # Tira as duplicatas (caso tenha)
+            lista = list(set(lista))
+            # Tira o espaço dos números encontrados no campo
+            lista = [linha.strip().lstrip('0') for linha in lista]
+
+            for linha in lista:
+                if len(linha) < 6 or len(linha) > 7:
+                    lista.remove(linha)
+        if len(conta) > 0:
+            camposaadicionar = self.retornabusca('Conta', conta)
+            contadespesa = True if len(camposaadicionar) > 0 else False
+            if contadespesa:
+                pacote = camposaadicionar[1]
+            else:
+                pacote = ''
+
+        if retornarquantidade:
+            listaquant = len(lista)
+            if transformaremtexto:
+                listatemp = lista
+                lista = ', '
+                lista = lista.join(listatemp)
+            if len(conta) > 0:
+                return lista, listaquant, contadespesa, pacote
+            else:
+                return lista, listaquant
+        else:
+            if transformaremtexto:
+                listatemp = lista
+                lista = ', '
+                lista = lista.join(listatemp)
+            if len(conta) > 0:
+                return lista, contadespesa, pacote
+            else:
+                return lista
+
+    def retornabusca(self, campo, elemento):
+        linha = self.arvore.loc[self.arvore[campo] == elemento]
+        if len(linha) == 1:
+            linha = linha.values.tolist()
+            linha = linha[0]
+        else:
+            linha = linha.values.tolist()
+
+        return linha
 
     def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False):
         """
@@ -324,6 +390,11 @@ class TrabalhaArquivo:
                     self.precabecalho.append(linha)
 
     def acertarlinhaquebrada(self, separador='', adicionarcabecalho=False):
+        """
+        :param separador: variável de separação de campos.
+        :param adicionarcabecalho: se deve adicionar o cabeçalho no arquivo.
+        :return:
+        """
         linhaanterior = ''
         listalinhascortadas = []
         listalinhasacertadas = []
@@ -387,6 +458,9 @@ class TrabalhaArquivo:
                 return listalinhascortadas, listalinhasacertadas
 
     def contarlinhasarq(self):
+        """
+        :return: conta a linha dos arquivos
+        """
         quantlinha = 0
         with open(self.caminho, 'r', encoding='ANSI') as arquivo:
             texto = arquivo.readlines()
@@ -492,22 +566,34 @@ class TrabalhaArquivo:
             inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
             mensagemetapa = 'Preparando Carga de Fornecedor...'
             print(mensagemetapa)
-            dfcut = df[['Tipo', 'Texto']]
+            dfcut = df[['Tipo', 'Fornecedor', 'Texto', 'Razão']]
             argumentos = [tuple(x) for x in dfcut.to_numpy()]
             fimetapa = time.time()
             inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
             mensagemetapa = 'Adicionando coluna Fornecedor...'
             print(mensagemetapa)
             time.sleep(1)
-            nucleosusados = int(psutil.cpu_count() * 0.25) if int(psutil.cpu_count() * 0.25) > 2 else 2
-            listafornecedores = pqdm(argumentos, listarnumeros, n_jobs=nucleosusados, unit=' linhas')
+            if psutil.cpu_count() > 2:
+                nucleosusados = int(psutil.cpu_count() * 0.75) if int(psutil.cpu_count() * 0.75) > 2 else 2
+            else:
+                nucleosusados = 1
+
+            listafornecedores = pqdm(argumentos, self.listarnumeros, n_jobs=nucleosusados, unit=' linhas')
             if len(listafornecedores) > 0:
                 if type(listafornecedores[0]) is tuple:
-                    print([list(x) for x in listafornecedores])
-                    listatemp = [list(x) for x in listafornecedores]
-                    listafornecedores, quantfornecedores = map(list, zip(*listatemp))
+                    listatemp = []
+                    for indice, x in enumerate(listafornecedores):
+                        if type(x) is tuple:
+                            listatemp.append(list(x))
+                        else:
+                            if type(x) is AttributeError:
+                                listatemp.append((str(x), 0))
+
+                    listafornecedores, quantfornecedores, contadespesa, pacote = map(list, zip(*listatemp))
                     df['Fornecedores'] = listafornecedores
                     df['Quant Fornecedores'] = quantfornecedores
+                    df['Conta de Despesa?'] = contadespesa
+                    df['Pacote N3'] = pacote
                 else:
                     df['Fornecedores'] = listafornecedores
 
