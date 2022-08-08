@@ -10,6 +10,8 @@ from tqdm import tqdm
 import psutil
 import pypyodbc
 import sensiveis as senha
+
+
 # import modin.pandas as pd
 
 
@@ -30,6 +32,18 @@ def retornarconsulta(tabela, campos=[], filtros=''):
     retorno = cursor.fetchall()
 
     return retorno
+
+
+def carregardf(tabela, df):
+    from sqlalchemy.engine import URL
+    import sqlalchemy as sa
+
+    connection_string = 'DRIVER={SQL Server Native Client 11.0};SERVER=' + senha.endbanco + ';DATABASE=' + senha.nomebanco + ';UID=' + senha.usrbanco.strip() + ';PWD=' + senha.pwdbanco.strip() + ';trusted_connection=No'
+    connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
+
+    dbEngine = sa.create_engine(connection_url)
+    df.to_sql(name=tabela, con=dbEngine, schema=senha.nomebanco, if_exists="append", index=False, chunksize=2,
+              method='multi')
 
 
 def caminhospadroes(caminho):
@@ -235,6 +249,8 @@ class TrabalhaArquivo:
         self.separador = ''
         self.cabecalhooriginal = ''
         self.arvore = None
+        self.dadosarquivo = None
+        self.dadostexto = None
 
     def retornaindice(self, textocabecalho):
         """
@@ -252,75 +268,62 @@ class TrabalhaArquivo:
             return -1
 
     def preencherarvore(self):
-        colunas = ['Conta', '[Pacote N3]']
-        retorno = retornarconsulta('GIG Arvores Conta', colunas, " WHERE [Pacote N1]='02 - Despesas'")
-        if len(retorno) > 0:
-            dfarvore = pd.DataFrame.from_records(retorno, columns=colunas)
-            self.arvore = dfarvore
-            # self.arvore = dfarvore.values.tolist()
+        try:
+            colunas = ['Conta', '[Pacote N3]']
+            retorno = retornarconsulta('GIG Arvores Conta', colunas, " WHERE [Pacote N1]='02 - Despesas'")
+            if len(retorno) > 0:
+                dfarvore = pd.DataFrame.from_records(retorno, columns=colunas)
+                self.arvore = dfarvore
+                # self.arvore = dfarvore.values.tolist()
+        except Exception as e:
+            self.arvore.append(str(e))
 
-    def listarnumeros(self, tipo, fornecedor='', texto='', conta='', transformaremtexto=True, retornarquantidade=True):
+    def listarnumeros(self, doc, tipo='', fornecedor='', material='', pedido='', texto='', conta='', transformaremtexto=True, retornarquantidade=True):
         """
-        :param fornecedor: campo forncedor da lista.
-        :param retornarquantidade: retorna a quantidade de fornecedor por linha.
+        :param doc: documento de entrada ou tupla de entrada.
+        :param tipo: tipo do lançamento.
+        :param fornecedor: campo fornecedor da linha.
+        :param material: campo material da linha.
+        :param pedido: campo pedido da linha.
+        :param texto: texto para extrair os números.
         :param conta: conta da linha.
         :param transformaremtexto: transformar a lista em texto.
-        :param tipo: tipo do lançamento.
-        :param texto: texto para extrair os números.
+        :param retornarquantidade: retorna a quantidade de fornecedor por linha.
         :return:
         """
+
+        # try:
         if self.arvore is None:
             self.preencherarvore()
 
-        lista = []
-        if type(tipo) is not tuple:
+        listabuscado = None
+
+        if type(doc) is not tuple:
+            doctemp = doc.strip()
             tipo = tipo.strip()
             fornecedor = fornecedor.strip()
+            material = material.strip()
+            pedido = pedido.strip()
             texto = texto.strip().upper()
             conta = conta.strip()
         else:
-            tipo, texto, conta = tipo
+            doctemp, tipo, fornecedor, material, pedido, texto, conta = doc
+            doctemp = doctemp.strip()
             tipo = tipo.strip()
             fornecedor = fornecedor.strip()
+            material = material.strip()
+            pedido = pedido.strip()
             texto = texto.strip().upper()
             conta = conta.strip()
 
-        if len(fornecedor) == 0:
-            match tipo:
-                case 'WE' | 'AB' | 'D6' | 'RE':
-                    # lista = re.findall(r'(?<=FORN)[^0-9]*(\d{6,7})[^0-9]?', texto)
-                    lista = re.findall(r'FORN[^0-9]*(\d{6,7})[^0-9]+', texto)
-                    lista = lista + re.findall(r'FORN[^0-9]*(\d{6,7})$', texto)
+        textooriginal = texto
+        if doctemp.strip() == '5000171477':
+            w = 1
 
-                case 'EP' | 'PV':
-                    lista = re.findall(r'_([\d]{6,7})_', texto.replace('_', '__'))
+        listafornecedor= self.retornarinftexto(fornecedor, texto, tipo, 'FORN', 6, 7)
+        listamaterial = self.retornarinftexto(material, texto, tipo, 'MAT', 4, 7)
+        listapedido = self.retornarinftexto(pedido, texto, tipo, 'PED', 10, 10)
 
-                case _:
-                    if 'FORN' not in texto:
-                        # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
-                        # if len(listatemp) > 0:
-                        #     lista = [item for t in listatemp for item in t]
-                        lista = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+', texto)
-                        lista = lista + re.findall(r'^(\d{6,7})[^0-9]+', texto)
-                        lista = lista + re.findall(r'[^0-9]+(\d{6,7})$', texto)
-                        lista = lista + re.findall(r'^(\d{6,7})$', texto)
-
-                    else:
-                        lista = re.findall(r'FORN[^0-9]*(\d{6,7})[^0-9]+', texto)
-                        lista = lista + re.findall(r'FORN[^0-9]*(\d{6,7})$', texto)
-        else:
-            lista = fornecedor
-
-        # Verifica se achou números segundo as regras definidas
-        if len(lista) > 0:
-            # Tira as duplicatas (caso tenha)
-            lista = list(set(lista))
-            # Tira o espaço dos números encontrados no campo
-            lista = [linha.strip().lstrip('0') for linha in lista]
-
-            for linha in lista:
-                if len(linha) < 6 or len(linha) > 7:
-                    lista.remove(linha)
         if len(conta) > 0:
             camposaadicionar = self.retornabusca('Conta', conta)
             contadespesa = True if len(camposaadicionar) > 0 else False
@@ -329,25 +332,61 @@ class TrabalhaArquivo:
             else:
                 pacote = ''
 
-        if retornarquantidade:
-            listaquant = len(lista)
-            if transformaremtexto:
-                listatemp = lista
-                lista = ', '
-                lista = lista.join(listatemp)
-            if len(conta) > 0:
-                return lista, listaquant, contadespesa, pacote
-            else:
-                return lista, listaquant
+        listaconcat = []
+
+        if listafornecedor is not None:
+            listaconcat.append(listafornecedor)
+
+        if listamaterial is not None:
+            listaconcat.append(listamaterial)
+
+        if listapedido is not None:
+            listaconcat.append(listapedido)
+
+        if len(listaconcat) > 0:
+            lista = pd.concat(listaconcat)
         else:
-            if transformaremtexto:
-                listatemp = lista
-                lista = ', '
-                lista = lista.join(listatemp)
+            lista = ''
+
+        if len(lista) > 0:
+            self.dadostexto = lista
+            # Inicia a variável de "Sem Valor" do Python
+            nan_value = float("NaN")
+            # Substitui a variável vazia por sem valor
+            self.dadostexto.replace('', nan_value, inplace=True)
+            self.dadostexto['Doc'] = doctemp
+            self.dadostexto['Texto'] = textooriginal
+            # item = self.dadostexto['Item'].values.tolist()
+            # doc = self.dadostexto['Doc'].values.tolist()
+            # texto = self.dadostexto['Texto'].values.tolist()
             if len(conta) > 0:
-                return lista, contadespesa, pacote
-            else:
-                return lista
+                self.dadostexto['Conta Despesa'] = contadespesa
+                self.dadostexto['Pacote'] = pacote
+                # contadespesa = dfsaida['Conta Despesa'].values.tolist()
+                # pacote = dfsaida['Pacote'].values.tolist()
+
+        # if retornarquantidade:
+        #     listaquant = len(lista)
+        #     if transformaremtexto:
+        #         listatemp = lista
+        #         lista = ', '
+        #         lista = lista.join(listatemp)
+        #     if len(conta) > 0:
+        #         return lista, listaquant, contadespesa, pacote
+        #     else:
+        #         return lista, listaquant
+        # else:
+        #     if transformaremtexto:
+        #         listatemp = lista
+        #         lista = ', '
+        #         lista = lista.join(listatemp)
+        #     if len(conta) > 0:
+        #         return lista, contadespesa, pacote
+        #     else:
+        #         return lista
+
+        # except:
+        #     print('Erro na linha com os item: ' + doc, tipo, texto, conta)
 
     def retornabusca(self, campo, elemento):
         linha = self.arvore.loc[self.arvore[campo] == elemento]
@@ -359,8 +398,9 @@ class TrabalhaArquivo:
 
         return linha
 
-    def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False):
+    def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False, codificacao='ANSI'):
         """
+        :param codificacao: codificação do arquivo de entrada.
         :param separador: caracter de separação.
         :param quantcampos: quantidade de campos.
         :param quebracabecalho: se o cabeçalho desse ser lista ou "string".
@@ -369,7 +409,7 @@ class TrabalhaArquivo:
         if len(self.separador) == 0:
             self.separador = separador
 
-        with open(self.caminho, 'r', encoding='ANSI') as arquivo:
+        with open(self.caminho, 'r', encoding=codificacao) as arquivo:
             texto = arquivo.readlines()
             for linha in texto:
                 linha = linha.strip()
@@ -389,8 +429,9 @@ class TrabalhaArquivo:
                 else:
                     self.precabecalho.append(linha)
 
-    def acertarlinhaquebrada(self, separador='', adicionarcabecalho=False):
+    def acertarlinhaquebrada(self, separador='', adicionarcabecalho=False, codificacao='ANSI'):
         """
+        :param codificacao: codificação do arquivo de entrada.
         :param separador: variável de separação de campos.
         :param adicionarcabecalho: se deve adicionar o cabeçalho no arquivo.
         :return:
@@ -409,9 +450,10 @@ class TrabalhaArquivo:
                 else:
                     self.listaarquivo.append(self.cabecalho)
 
-            quantlinhas = self.contarlinhasarq()
+            quantlinhas = self.contarlinhasarq(codificacao)
             self.quantidadelinhas.append(quantlinhas)
-            with open(self.caminho, 'r', encoding='ANSI') as arquivo:
+
+            with open(self.caminho, 'r', encoding=codificacao) as arquivo:
                 texto = arquivo.readlines()
                 with tqdm(total=quantlinhas, unit=' linhas') as barra_progresso:
                     for linha in texto:
@@ -457,7 +499,7 @@ class TrabalhaArquivo:
 
                 return listalinhascortadas, listalinhasacertadas
 
-    def contarlinhasarq(self):
+    def contarlinhasarq(self, codificacao='ANSI'):
         """
         :return: conta a linha dos arquivos
         """
@@ -469,16 +511,18 @@ class TrabalhaArquivo:
 
         return quantlinha
 
-    def salvar_arquivo(self, destino):
+    def salvar_arquivo(self, destino, codificacao='ANSI'):
         """
+        :param codificacao: codificação do arquivo de saída.
         :param destino: caminho de destino dos arquivos.
         :return:
         """
         linhatemp = ''
+
         caminhotemp = self.caminho.upper()
         caminhoarquivo = destino + '\\' + os.path.basename(caminhotemp.replace('.TXT', '_tratado.TXT'))
 
-        with open(caminhoarquivo, 'w', encoding='ANSI') as arquivo:
+        with open(caminhoarquivo, 'w', encoding=codificacao) as arquivo:
             for linhalista in self.listaarquivo:
                 linhalista = [str(campo).strip() + self.separador for campo in linhalista]
                 linhalista = left(linhalista, len(linhalista) - 1)
@@ -499,7 +543,7 @@ class TrabalhaArquivo:
         listofdict = [dict(zip(cabecalhoacertado, line)) for line in self.listaarquivo]
         return listofdict
 
-    def retornadf(self, campovalor='', adicionafornecedor=True):
+    def preparadf(self, campovalor='', adicionafornecedor=True):
         """
         :param adicionafornecedor: adiciona o fornecedor.
         :param campovalor: nome do campo a ser tratado como valor (põe em float também)
@@ -564,13 +608,14 @@ class TrabalhaArquivo:
             # Processamento Paralelo 2
             fimetapa = time.time()
             inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-            mensagemetapa = 'Preparando Carga de Fornecedor...'
+            mensagemetapa = 'Preparando análise do campo texto...'
             print(mensagemetapa)
-            dfcut = df[['Tipo', 'Fornecedor', 'Texto', 'Razão']]
+
+            dfcut = df[['Nº doc.', 'Tipo', 'Fornecedor', 'Material', 'Doc.compra', 'Texto', 'Razão']]
             argumentos = [tuple(x) for x in dfcut.to_numpy()]
             fimetapa = time.time()
             inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-            mensagemetapa = 'Adicionando coluna Fornecedor...'
+            mensagemetapa = 'Analisando o campo texto...'
             print(mensagemetapa)
             time.sleep(1)
             if psutil.cpu_count() > 2:
@@ -578,30 +623,113 @@ class TrabalhaArquivo:
             else:
                 nucleosusados = 1
 
-            listafornecedores = pqdm(argumentos, self.listarnumeros, n_jobs=nucleosusados, unit=' linhas')
-            if len(listafornecedores) > 0:
-                if type(listafornecedores[0]) is tuple:
-                    listatemp = []
-                    for indice, x in enumerate(listafornecedores):
-                        if type(x) is tuple:
-                            listatemp.append(list(x))
-                        else:
-                            if type(x) is AttributeError:
-                                listatemp.append((str(x), 0))
+            pqdm(argumentos, self.listarnumeros, n_jobs=nucleosusados, unit=' linhas')
+            # if len(listafornecedores) > 0:
+            #     if type(listafornecedores[0]) is tuple:
+            #         listatemp = []
+            #         for indice, x in enumerate(listafornecedores):
+            #             if type(x) is tuple:
+            #                 listatemp.append(list(x))
+            #             else:
+            #                 if type(x) is AttributeError:
+            #                     listatemp.append((str(x), 0))
+            #
+            # doc, texto, contadespesa, pacote, item, tipo = map(list, zip(*listatemp))
 
-                    listafornecedores, quantfornecedores, contadespesa, pacote = map(list, zip(*listatemp))
-                    df['Fornecedores'] = listafornecedores
-                    df['Quant Fornecedores'] = quantfornecedores
-                    df['Conta de Despesa?'] = contadespesa
-                    df['Pacote N3'] = pacote
-                else:
-                    df['Fornecedores'] = listafornecedores
+            # dfforn = None
+
+            # doccleaning = [i for i in doc if i is not None]
+            #
+            # dfforn['DOC'] = doccleaning
+            # dfforn['Texto'] = texto
+            # dfforn['Conta de Despesa?'] = contadespesa
+            # dfforn['Pacote N3'] = pacote
+            # dfforn['Desc Item'] = item
+            # dfforn['Tipo'] = tipo
+
+        self.dadosarquivo = df
 
         fimetapa = time.time()
         inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
 
-        # Retorna o dataframe tratado
-        return df
+    def retornarinftexto(self, campobuscado, texto, tipo, pedaconferencia, minimo=0, maximo=''):
+        import warnings
+
+        warnings.simplefilter('ignore', lineno=731)
+
+        # Lista de Itens buscado (nesse caso só números)
+        listanum = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        quantidadenum = 0
+
+        # Verifica quantos itens da lista (nesse caso número) existem no texto, se não tem número ou uma quantidade
+        # insuficiente para suprir o tamanho mínimo exigido na chamada da função não tenta buscar nada
+        for numero in listanum:
+            quantidadenum = quantidadenum + texto.count(numero)
+
+        # Verifica se a quantidade de números atende ao pedido da chamada da função
+        if (quantidadenum >= 2 and quantidadenum >= minimo) and len(campobuscado.strip()) == 0:
+            texto = texto.upper()
+            textooriginal = texto
+
+            # Lista de itens distintos que identificam no campo texto
+            listareferencia = ['FORN', 'MAT', 'NF', 'PED']
+
+            match tipo:
+                case 'WE' | 'AB' | 'D6' | 'RE':
+                    lista = re.findall(
+                        pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                    lista = lista + re.findall(
+                        pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+
+                case 'EP' | 'PV':
+                    lista = re.findall(r'_(\d{' + str(minimo) + ',' + str(maximo) + r'})_',
+                                       texto.replace('_', '__'))
+                    lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})_',
+                                               texto.replace('_', '__'))
+                    lista = lista + re.findall(r'_(\d{' + str(minimo) + ',' + str(maximo) + r'})$',
+                                               texto.replace('_', '__'))
+
+                case _:
+                    if pedaconferencia not in texto:
+                        # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
+                        # if len(listatemp) > 0:
+                        #     lista = [item for t in listatemp for item in t]
+                        lista = re.findall(r'[^0-9]+(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                        lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                        lista = lista + re.findall(r'[^0-9]+(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+                        lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+                    else:
+                        lista = re.findall(
+                            pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+',
+                            texto)
+                        lista = lista + re.findall(
+                            pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+
+            if len(lista) > 0:
+                for item in listareferencia:
+                    if item != pedaconferencia and item in textooriginal:
+                        for indice, itembuscado in enumerate(lista):
+                            if pedaconferencia in texto:
+                                listateste = re.findall(pedaconferencia + r'[A-Za-z0-9]*' + item + r'[^0-9]*' + itembuscado, texto)
+                            else:
+                                listateste = re.findall(item + r'[^0-9]*' + itembuscado, texto)
+                            if len(listateste) > 0:
+                                del (lista[indice])
+                            else:
+                                itembuscado.strip().lstrip('0')
+
+                dflista = pd.DataFrame(list(lista))
+                dflista.columns = ['Item']
+
+                dflista = dflista.drop_duplicates()
+
+                dflista['Tipo'] = pedaconferencia
+
+                return dflista
+            else:
+                return None
+        else:
+            return None
 
 
 def acertavalor(valor):
@@ -638,3 +766,5 @@ def tratatempo(inicioetapa, fimetapa, mensagemetapa):
     minutes, seconds = divmod(rem, 60)
     print(mensagemetapa + " " + f'{"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}')
     return fimetapa
+
+

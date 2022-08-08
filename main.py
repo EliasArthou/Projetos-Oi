@@ -1,18 +1,19 @@
 """
 Início de tratamento de arquivo
 """
-
 import time
 import messagebox
 import auxiliares as aux
 import sys
+from pathlib import Path
 import pandas as pd
 
 # from IPython.display import display  # pip install IPython
 
 # try:
 
-tabela = 'GIG TESTE FORN'
+codentrada = 'ANSI' #'UTF8'
+tabela = 'GIG Entrada SAP com Fornecedor'
 tabelafornecedor = 'GIG Texto Fornecedor'
 listadicionario = None
 listafornecedores = []
@@ -47,6 +48,7 @@ if len(arquivo_caminho_destino) == 0:
 tempoinicio = time.time()
 
 # Looping para "varrer" todos os arquivos da pasta (inclui os arquivos das subpastas)
+mensagemetapa = ''
 
 for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     objarquivo = aux.TrabalhaArquivo(arquivo)
@@ -54,31 +56,55 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     mensagemetapa = 'Verificando Cabeçalho...'
     print(mensagemetapa)
 
-    objarquivo.verificacabecalho('|', quantcolunas, True)
+    objarquivo.verificacabecalho('|', quantcolunas, True, codentrada)
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
     mensagemetapa = 'Tratando Linha Quebrada...'
     print(mensagemetapa)
-    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|')
+    linhascortadas, linhasacertadas = objarquivo.acertarlinhaquebrada('|', codificacao=codentrada)
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
     mensagemetapa = 'Acertando Valor...'
     print(mensagemetapa)
 
-    listadicionario = objarquivo.retornadf('Mont.em MI')
+    # listadicionario, listafornecedores = objarquivo.retornadf('Mont.em MI')
+    objarquivo.preparadf('Mont.em MI')
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    mensagemetapa = 'Salvando Arquivo...'
+    mensagemetapa = 'Salvando Arquivo Dados...'
     print(mensagemetapa)
 
-    # print(listadicionario.groupby(['Quant Fornecedores']).count())
+    if objarquivo.dadosarquivo is not None:
+        if not objarquivo.dadosarquivo.isEmpty():
+            objarquivo.dadosarquivo.to_csv(arquivo_caminho_destino+'\\'+Path(arquivo).stem + '.txt', index=None, sep='|', mode='a', encoding=codentrada)
 
-listadicionario.to_csv(arquivo_caminho_destino+'\\pandas.txt', index=None, sep='|', mode='a')
+    #fimetapa = time.time()
+    #inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    #mensagemetapa = 'Carregando dados para o banco...'
+    #print(mensagemetapa)
+    #aux.carregardf(tabela, listadicionario)
 
-del listadicionario
+    fimetapa = time.time()
+    inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    mensagemetapa = 'Salvando Arquivo Fornecedor/Material/Pedido...'
+    print(mensagemetapa)
+
+    if objarquivo.dadostexto is not None:
+        if not objarquivo.dadostexto.dadosarquivo.isEmpty():
+            objarquivo.dadostexto.to_csv(arquivo_caminho_destino + '\\' + Path(arquivo).stem + '_TextoQuebrado.txt', index=None, sep='|', mode='a', encoding=codentrada)
+
+    #fimetapa = time.time()
+    #inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    #mensagemetapa = 'Carregando fornecedores para o banco...'
+    #print(mensagemetapa)
+    #aux.carregardf(tabela, listafornecedores)
+
+
+del objarquivo.dadostexto
+del objarquivo.dadostexto
 
 fimetapa = time.time()
 inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
@@ -92,3 +118,9 @@ minutes, seconds = divmod(rem, 60)
 messagebox.msgbox(
     f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
     messagebox.MB_OK, 'Tempo Decorrido')
+
+#testar = aux.TrabalhaArquivo('c:\\teste\\teste.txt')
+#print (testar.retornarinftexto('', 'NF:BXPED:1234567 INVOICE_FORN:179850', 'AJ', 'FORN', 6, 7))
+
+
+
