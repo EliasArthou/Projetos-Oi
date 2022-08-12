@@ -69,17 +69,17 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     mensagemetapa = 'Acertando Valor...'
     print(mensagemetapa)
 
-    # listadicionario, listafornecedores = objarquivo.retornadf('Mont.em MI')
-    objarquivo.preparadf('Mont.em MI')
+    listadicionario = objarquivo.preparadf('Mont.em MI')
+    # objarquivo.preparadf('Mont.em MI')
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
     mensagemetapa = 'Salvando Arquivo Dados...'
     print(mensagemetapa)
 
-    if objarquivo.dadosarquivo is not None:
-        if not objarquivo.dadosarquivo.isEmpty():
-            objarquivo.dadosarquivo.to_csv(arquivo_caminho_destino+'\\'+Path(arquivo).stem + '.txt', index=None, sep='|', mode='a', encoding=codentrada)
+    if listadicionario is not None:
+        if not listadicionario.isEmpty():
+            listadicionario.to_csv(arquivo_caminho_destino+'\\'+Path(arquivo).stem + '.txt', index=None, sep='|', mode='a', encoding=codentrada)
 
     #fimetapa = time.time()
     #inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)

@@ -249,7 +249,7 @@ class TrabalhaArquivo:
         self.separador = ''
         self.cabecalhooriginal = ''
         self.arvore = None
-        self.dadosarquivo = None
+        # self.dadosarquivo = None
         self.dadostexto = None
 
     def retornaindice(self, textocabecalho):
@@ -647,19 +647,40 @@ class TrabalhaArquivo:
             # dfforn['Desc Item'] = item
             # dfforn['Tipo'] = tipo
 
-        self.dadosarquivo = df
+        # self.dadosarquivo = df
+
+        return df
 
         fimetapa = time.time()
         inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
 
-    def retornarinftexto(self, campobuscado, texto, tipo, pedaconferencia, minimo=0, maximo=''):
+    def retornarinftexto(self, campobuscado, texto, tipo, pedaconferencia):
         import warnings
 
         warnings.simplefilter('ignore', lineno=731)
 
+        minimo = 0
+        maximo = 0
+
         # Lista de Itens buscado (nesse caso só números)
         listanum = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
         quantidadenum = 0
+
+        match pedaconferencia:
+            case 'FORN':
+                minimo = 6
+                maximo = 7
+
+            case 'MAT':
+                minimo = 4
+                maximo = 7
+
+            case 'PED':
+                minimo = 10
+                maximo = 10
+
+            case _:
+                return
 
         # Verifica quantos itens da lista (nesse caso número) existem no texto, se não tem número ou uma quantidade
         # insuficiente para suprir o tamanho mínimo exigido na chamada da função não tenta buscar nada
