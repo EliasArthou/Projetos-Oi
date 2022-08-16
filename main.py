@@ -12,7 +12,7 @@ import pandas as pd
 
 # try:
 
-codentrada = 'ANSI' #'UTF8'
+codentrada = 'ANSI'  # 'UTF8'
 tabela = 'GIG Entrada SAP com Fornecedor'
 tabelafornecedor = 'GIG Texto Fornecedor'
 listadicionario = None
@@ -81,11 +81,11 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
         if not listadicionario.isEmpty():
             listadicionario.to_csv(arquivo_caminho_destino+'\\'+Path(arquivo).stem + '.txt', index=None, sep='|', mode='a', encoding=codentrada)
 
-    #fimetapa = time.time()
-    #inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    #mensagemetapa = 'Carregando dados para o banco...'
-    #print(mensagemetapa)
-    #aux.carregardf(tabela, listadicionario)
+    # fimetapa = time.time()
+    # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    # mensagemetapa = 'Carregando dados para o banco...'
+    # print(mensagemetapa)
+    # aux.carregardf(tabela, listadicionario)
 
     fimetapa = time.time()
     inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
@@ -96,14 +96,14 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
         if not objarquivo.dadostexto.dadosarquivo.isEmpty():
             objarquivo.dadostexto.to_csv(arquivo_caminho_destino + '\\' + Path(arquivo).stem + '_TextoQuebrado.txt', index=None, sep='|', mode='a', encoding=codentrada)
 
-    #fimetapa = time.time()
-    #inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
-    #mensagemetapa = 'Carregando fornecedores para o banco...'
-    #print(mensagemetapa)
-    #aux.carregardf(tabela, listafornecedores)
+    # fimetapa = time.time()
+    # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)
+    # mensagemetapa = 'Carregando fornecedores para o banco...'
+    # print(mensagemetapa)
+    # aux.carregardf(tabela, listafornecedores)
 
 
-del objarquivo.dadostexto
+# del objarquivo.dadostexto
 del objarquivo.dadostexto
 
 fimetapa = time.time()
@@ -119,8 +119,8 @@ messagebox.msgbox(
     f'O tempo decorrido foi de: {"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}',
     messagebox.MB_OK, 'Tempo Decorrido')
 
-#testar = aux.TrabalhaArquivo('c:\\teste\\teste.txt')
-#print (testar.retornarinftexto('', 'NF:BXPED:1234567 INVOICE_FORN:179850', 'AJ', 'FORN', 6, 7))
+# testar = aux.TrabalhaArquivo('c:\\teste\\teste.txt')
+# print (testar.retornarinftexto('', 'NF:BXPED:1234567 INVOICE_FORN:179850', 'AJ', 'FORN', 6, 7))
 
 
 
