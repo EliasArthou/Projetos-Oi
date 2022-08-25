@@ -7,10 +7,12 @@ import re
 import pandas as pd
 import time
 from tqdm import tqdm
-from pqdm.processes import pqdm
+from pqdm.threads import pqdm
 import psutil
 import pypyodbc
 import sensiveis as senha
+
+arvorefora = None
 
 
 # import modin.pandas as pd
@@ -279,139 +281,6 @@ class TrabalhaArquivo:
         except Exception as e:
             self.arvore.append(str(e))
 
-    def listarnumeros(self, doc, tipo='', fornecedor='', material='', pedido='', texto='', conta='',
-                      transformaremtexto=False):
-        """
-        :param doc: documento de entrada ou tupla de entrada.
-        :param tipo: tipo do lançamento.
-        :param fornecedor: campo fornecedor da linha.
-        :param material: campo material da linha.
-        :param pedido: campo pedido da linha.
-        :param texto: texto para extrair os números.
-        :param conta: conta da linha.
-        :param transformaremtexto: transformar a lista em texto.
-        :param retornarquantidade: retorna a quantidade de fornecedor por linha.
-        :return:
-        """
-
-        # try:
-
-
-        listabuscado = None
-
-        if type(doc) is not tuple:
-            doctemp = doc.strip()
-            tipo = tipo.strip()
-            fornecedor = fornecedor.strip()
-            material = material.strip()
-            pedido = pedido.strip()
-            texto = texto.strip().upper()
-            conta = conta.strip()
-        else:
-            doctemp, tipo, fornecedor, material, pedido, texto, conta = doc
-            doctemp = doctemp.strip()
-            tipo = tipo.strip()
-            fornecedor = fornecedor.strip()
-            material = material.strip()
-            pedido = pedido.strip()
-            texto = texto.strip().upper()
-            conta = conta.strip()
-
-        textooriginal = texto
-        if texto == 'VENDA OI PLACE NF 001184':
-            w = 1
-
-        listafornecedor = self.retornarinftexto(fornecedor, texto, tipo, 'FORN')
-        listamaterial = self.retornarinftexto(material, texto, tipo, 'MAT')
-        listapedido = self.retornarinftexto(pedido, texto, tipo, 'PED')
-
-        if len(conta) > 0:
-            camposaadicionar = self.retornabusca('Conta', conta)
-            contadespesa = True if len(camposaadicionar) > 0 else False
-            if contadespesa:
-                pacote = camposaadicionar[1]
-            else:
-                pacote = ''
-
-        listaconcat = []
-
-        if listafornecedor is not None:
-            listaconcat.append(listafornecedor)
-
-        if listamaterial is not None:
-            listaconcat.append(listamaterial)
-
-        if listapedido is not None:
-            listaconcat.append(listapedido)
-
-        if len(listaconcat) > 0:
-            lista = pd.concat(listaconcat)
-        else:
-            lista = ''
-
-        if len(lista) > 0:
-            dfdadostexto = lista
-            # Inicia a variável de "Sem Valor" do Python
-            nan_value = float("NaN")
-            # Substitui a variável vazia por sem valor
-            dfdadostexto.replace('', nan_value, inplace=True)
-            dfdadostexto['Doc'] = doctemp
-            dfdadostexto['Texto'] = textooriginal
-            # item = self.dadostexto['Item'].values.tolist()
-            # doc = self.dadostexto['Doc'].values.tolist()
-            # texto = self.dadostexto['Texto'].values.tolist()
-            if len(conta) > 0:
-                dfdadostexto['Conta Despesa'] = contadespesa
-                dfdadostexto['Pacote'] = pacote
-                # contadespesa = dfsaida['Conta Despesa'].values.tolist()
-                # pacote = dfsaida['Pacote'].values.tolist()
-
-                dfdadostexto = dfdadostexto[dfdadostexto['Conta Despesa'] == True]
-                if not dfdadostexto.empty:
-                    if transformaremtexto:
-                        lista = dfdadostexto.astype(str)
-                        listatemp = lista
-                        lista = ', '
-                        lista = lista.join(listatemp)
-                        return lista
-                    else:
-                        return dfdadostexto
-                else:
-                    return
-
-        # if retornarquantidade:
-        #     listaquant = len(lista)
-        #     if transformaremtexto:
-        #         listatemp = lista
-        #         lista = ', '
-        #         lista = lista.join(listatemp)
-        #     if len(conta) > 0:
-        #         return lista, listaquant, contadespesa, pacote
-        #     else:
-        #         return lista, listaquant
-        # else:
-
-        else:
-            return
-
-        # except:
-        #     print('Erro na linha com os item: ' + doc, tipo, texto, conta)
-
-    def retornabusca(self, campo, elemento):
-        """
-        :param campo: campo para busca
-        :param elemento: elemento a ser buscado
-        :return:
-        """
-        linha = self.arvore.loc[self.arvore[campo] == elemento]
-        if len(linha) == 1:
-            linha = linha.values.tolist()
-            linha = linha[0]
-        else:
-            linha = linha.values.tolist()
-
-        return linha
-
     def verificacabecalho(self, separador, quantcampos=0, quebracabecalho=False, codificacao='ANSI'):
         """
         :param codificacao: codificação do arquivo de entrada.
@@ -560,13 +429,8 @@ class TrabalhaArquivo:
         :param campovalor: nome do campo a ser tratado como valor (põe em float também)
         :return:
         """
-        # Processamento Paralelo
-        # from joblib import Parallel, delayed
-        # Processamento Paralelo 2
-        # from pqdm.threads import pqdm
-
         inicioetapa = time.time()
-        mensagemetapa = 'Acertando cabecalho...'
+        mensagemetapa = 'Acertando cabeçalho...'
         # Tira os espaços dos nomes dos cabeçalhos
         if type(self.cabecalho) is list:
             cabecalhoacertado = [campo.strip() for campo in self.cabecalho]
@@ -616,6 +480,11 @@ class TrabalhaArquivo:
         :param dfentrada: dataframe com as informações.
 
         """
+        if self.arvore is None:
+            self.preencherarvore()
+
+        arvorefora = self.arvore
+
         inicioetapa = time.time()
         mensagemetapa = 'Preparando análise do campo texto...'
         print(mensagemetapa)
@@ -632,10 +501,7 @@ class TrabalhaArquivo:
         else:
             nucleosusados = 1
 
-        if self.arvore is None:
-            self.preencherarvore()
-
-        lista = pqdm(argumentos, self.listarnumeros, n_jobs=nucleosusados, unit=' linhas')
+        lista = pqdm(argumentos, listarnumeros, n_jobs=nucleosusados, unit=' linhas')
         # lista = None
         # for linha in argumentos:
         #     retorno = self.listarnumeros(linha)
@@ -654,123 +520,252 @@ class TrabalhaArquivo:
         return lista
 
 
+def retornarinftexto(campobuscado, texto, tipo, pedaconferencia):
+    """
+    :param campobuscado: campo individual que está sendo buscado no texto, se tiver informação, não busca no texto.
+    :param texto: campo texto onde a informação é buscada.
+    :param tipo: tipo do lançamento da linha para saber como buscar a informação.
+    :param pedaconferencia: um pedaço do texto pra referência Ex.: 'FORN' para fornecedor.
+    :return:
+    """
+    import warnings
 
-    def retornarinftexto(self, campobuscado, texto, tipo, pedaconferencia):
-        """
-        :param campobuscado: campo individual que está sendo buscado no texto, se tiver informação, não busca no texto.
-        :param texto: campo texto onde a informação é buscada.
-        :param tipo: tipo do lançamento da linha para saber como buscar a informação.
-        :param pedaconferencia: um pedaço do texto pra referência Ex.: 'FORN' para fornecedor.
-        :return:
-        """
-        import warnings
+    warnings.simplefilter('ignore', lineno=757)
 
-        warnings.simplefilter('ignore', lineno=757)
+    if type(campobuscado) is tuple:
+        campobuscadotemp, texto, tipo, pedaconferencia = campobuscado
+    else:
+        campobuscadotemp = campobuscado
 
-        if type(campobuscado) is tuple:
-            campobuscadotemp, texto, tipo, pedaconferencia = campobuscado
-        else:
-            campobuscadotemp = campobuscado
+    campobuscadotemp = campobuscadotemp.strip()
+    texto = texto.strip()
+    tipo = tipo.strip()
+    pedaconferencia = pedaconferencia.strip()
 
-        campobuscadotemp = campobuscadotemp.strip()
-        texto = texto.strip()
-        tipo = tipo.strip()
-        pedaconferencia = pedaconferencia.strip()
+    # Lista de Itens buscado (nesse caso só números)
+    listanum = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    quantidadenum = 0
 
-        # Lista de Itens buscado (nesse caso só números)
-        listanum = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-        quantidadenum = 0
+    match pedaconferencia:
+        case 'FORN':
+            minimo = 6
+            maximo = 7
 
-        match pedaconferencia:
-            case 'FORN':
-                minimo = 6
-                maximo = 7
+        case 'MAT':
+            minimo = 4
+            maximo = 7
 
-            case 'MAT':
-                minimo = 4
-                maximo = 7
+        case 'PED':
+            minimo = 10
+            maximo = 10
 
-            case 'PED':
-                minimo = 10
-                maximo = 10
+        case _:
+            return ''
+
+    # Verifica quantos itens da lista (nesse caso número) existem no texto, se não tem número ou uma quantidade
+    # insuficiente para suprir o tamanho mínimo exigido na chamada da função não tenta buscar nada
+    for numero in listanum:
+        quantidadenum = quantidadenum + texto.count(numero)
+
+    # Verifica se a quantidade de números atende ao pedido da chamada da função
+    if (quantidadenum >= 2 and quantidadenum >= minimo) and len(campobuscadotemp.strip()) == 0:
+        texto = texto.upper()
+        textooriginal = texto
+
+        # Lista de itens distintos que identificam no campo texto
+        listareferencia = ['FORN', 'MAT', 'NF', 'PED']
+
+        match tipo:
+            case 'WE' | 'AB' | 'D6' | 'RE':
+                lista = re.findall(
+                    pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                lista = lista + re.findall(
+                    pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+
+            case 'EP' | 'PV':
+                lista = re.findall(r'_(\d{' + str(minimo) + ',' + str(maximo) + r'})_',
+                                   texto.replace('_', '__'))
+                lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})_',
+                                           texto.replace('_', '__'))
+                lista = lista + re.findall(r'_(\d{' + str(minimo) + ',' + str(maximo) + r'})$',
+                                           texto.replace('_', '__'))
 
             case _:
-                return ''
-
-        # Verifica quantos itens da lista (nesse caso número) existem no texto, se não tem número ou uma quantidade
-        # insuficiente para suprir o tamanho mínimo exigido na chamada da função não tenta buscar nada
-        for numero in listanum:
-            quantidadenum = quantidadenum + texto.count(numero)
-
-        # Verifica se a quantidade de números atende ao pedido da chamada da função
-        if (quantidadenum >= 2 and quantidadenum >= minimo) and len(campobuscadotemp.strip()) == 0:
-            texto = texto.upper()
-            textooriginal = texto
-
-            # Lista de itens distintos que identificam no campo texto
-            listareferencia = ['FORN', 'MAT', 'NF', 'PED']
-
-            match tipo:
-                case 'WE' | 'AB' | 'D6' | 'RE':
+                if pedaconferencia not in texto:
+                    # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
+                    # if len(listatemp) > 0:
+                    #     lista = [item for t in listatemp for item in t]
+                    lista = re.findall(r'[^0-9]+(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                    lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                    lista = lista + re.findall(r'[^0-9]+(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+                    lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
+                else:
                     lista = re.findall(
-                        pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
+                        pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+',
+                        texto)
                     lista = lista + re.findall(
                         pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
 
-                case 'EP' | 'PV':
-                    lista = re.findall(r'_(\d{' + str(minimo) + ',' + str(maximo) + r'})_',
-                                       texto.replace('_', '__'))
-                    lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})_',
-                                               texto.replace('_', '__'))
-                    lista = lista + re.findall(r'_(\d{' + str(minimo) + ',' + str(maximo) + r'})$',
-                                               texto.replace('_', '__'))
-
-                case _:
-                    if pedaconferencia not in texto:
-                        # listatemp = re.findall(r'[^0-9]+(\d{6,7})[^0-9]+|^(\d{6,7})[^0-9]+|[^0-9]+(\d{6,7})$|^(\d{6,7})$', texto)
-                        # if len(listatemp) > 0:
-                        #     lista = [item for t in listatemp for item in t]
-                        lista = re.findall(r'[^0-9]+(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
-                        lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+', texto)
-                        lista = lista + re.findall(r'[^0-9]+(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
-                        lista = lista + re.findall(r'^(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
-                    else:
-                        lista = re.findall(
-                            pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})[^0-9]+',
-                            texto)
-                        lista = lista + re.findall(
-                            pedaconferencia + r'[^0-9]*(\d{' + str(minimo) + ',' + str(maximo) + r'})$', texto)
-
+        if len(lista) > 0:
+            for item in listareferencia:
+                if item != pedaconferencia and item in textooriginal:
+                    for indice, itembuscado in enumerate(lista):
+                        if pedaconferencia in texto:
+                            listateste = re.findall(
+                                pedaconferencia + r'[A-Za-z0-9]*' + item + r'[^0-9]*' + itembuscado, texto)
+                        else:
+                            listateste = re.findall(item + r'[^0-9]*' + itembuscado, texto)
+                        if len(listateste) > 0:
+                            del (lista[indice])
+                        else:
+                            itembuscado.strip().lstrip('0')
             if len(lista) > 0:
-                for item in listareferencia:
-                    if item != pedaconferencia and item in textooriginal:
-                        for indice, itembuscado in enumerate(lista):
-                            if pedaconferencia in texto:
-                                listateste = re.findall(
-                                    pedaconferencia + r'[A-Za-z0-9]*' + item + r'[^0-9]*' + itembuscado, texto)
-                            else:
-                                listateste = re.findall(item + r'[^0-9]*' + itembuscado, texto)
-                            if len(listateste) > 0:
-                                del (lista[indice])
-                            else:
-                                itembuscado.strip().lstrip('0')
-                if len(lista) > 0:
-                    dflista = pd.DataFrame(list(lista))
-                    dflista.columns = ['Item']
+                dflista = pd.DataFrame(list(lista))
+                dflista.columns = ['Item']
 
-                    dflista = dflista.drop_duplicates()
+                dflista = dflista.drop_duplicates()
 
-                    dflista['Tipo'] = pedaconferencia
+                dflista['Tipo'] = pedaconferencia
 
-                    # lista = dflista.values.tolist()
+                # lista = dflista.values.tolist()
 
-                    return dflista
-                else:
-                    return None
+                return dflista
             else:
                 return None
         else:
             return None
+    else:
+        return None
+
+
+def listarnumeros(doc, tipo='', fornecedor='', material='', pedido='', texto='', conta='',
+                  transformaremtexto=False):
+    """
+    :param doc: documento de entrada ou tupla de entrada.
+    :param tipo: tipo do lançamento.
+    :param fornecedor: campo fornecedor da linha.
+    :param material: campo material da linha.
+    :param pedido: campo pedido da linha.
+    :param texto: texto para extrair os números.
+    :param conta: conta da linha.
+    :param transformaremtexto: transformar a lista em texto.
+    :param retornarquantidade: retorna a quantidade de fornecedor por linha.
+    :return:
+    """
+
+    # try:
+
+    if type(doc) is not tuple:
+        doctemp = doc.strip()
+        tipo = tipo.strip()
+        fornecedor = fornecedor.strip()
+        material = material.strip()
+        pedido = pedido.strip()
+        texto = texto.strip().upper()
+        conta = conta.strip()
+    else:
+        doctemp, tipo, fornecedor, material, pedido, texto, conta = doc
+        doctemp = doctemp.strip()
+        tipo = tipo.strip()
+        fornecedor = fornecedor.strip()
+        material = material.strip()
+        pedido = pedido.strip()
+        texto = texto.strip().upper()
+        conta = conta.strip()
+
+    textooriginal = texto
+
+    listafornecedor = retornarinftexto(fornecedor, texto, tipo, 'FORN')
+    listamaterial = retornarinftexto(material, texto, tipo, 'MAT')
+    listapedido = retornarinftexto(pedido, texto, tipo, 'PED')
+
+    if len(conta) > 0:
+        camposaadicionar = retornabusca(arvorefora, 'Conta', conta)
+        contadespesa = True if len(camposaadicionar) > 0 else False
+        if contadespesa:
+            pacote = camposaadicionar[1]
+        else:
+            pacote = ''
+
+    listaconcat = []
+
+    if listafornecedor is not None:
+        listaconcat.append(listafornecedor)
+
+    if listamaterial is not None:
+        listaconcat.append(listamaterial)
+
+    if listapedido is not None:
+        listaconcat.append(listapedido)
+
+    if len(listaconcat) > 0:
+        lista = pd.concat(listaconcat)
+    else:
+        lista = ''
+
+    if len(lista) > 0:
+        dfdadostexto = lista
+        # Inicia a variável de "Sem Valor" do Python
+        nan_value = float("NaN")
+        # Substitui a variável vazia por sem valor
+        dfdadostexto.replace('', nan_value, inplace=True)
+        dfdadostexto['Doc'] = doctemp
+        dfdadostexto['Texto'] = textooriginal
+        # item = self.dadostexto['Item'].values.tolist()
+        # doc = self.dadostexto['Doc'].values.tolist()
+        # texto = self.dadostexto['Texto'].values.tolist()
+        if len(conta) > 0:
+            dfdadostexto['Conta Despesa'] = contadespesa
+            dfdadostexto['Pacote'] = pacote
+            # contadespesa = dfsaida['Conta Despesa'].values.tolist()
+            # pacote = dfsaida['Pacote'].values.tolist()
+
+            dfdadostexto = dfdadostexto[dfdadostexto['Conta Despesa'] == True]
+            if not dfdadostexto.empty:
+                if transformaremtexto:
+                    lista = dfdadostexto.astype(str)
+                    listatemp = lista
+                    lista = ', '
+                    lista = lista.join(listatemp)
+                    return lista
+                else:
+                    return dfdadostexto
+            else:
+                return
+
+    # if retornarquantidade:
+    #     listaquant = len(lista)
+    #     if transformaremtexto:
+    #         listatemp = lista
+    #         lista = ', '
+    #         lista = lista.join(listatemp)
+    #     if len(conta) > 0:
+    #         return lista, listaquant, contadespesa, pacote
+    #     else:
+    #         return lista, listaquant
+    # else:
+
+    else:
+        return
+
+    # except:
+    #     print('Erro na linha com os item: ' + doc, tipo, texto, conta)
+
+def retornabusca(df, campo, elemento):
+    """
+    :param df: dataframe com dados a serem buscados
+    :param campo: campo para busca
+    :param elemento: elemento a ser buscado
+    :return:
+    """
+    linha = df.loc[df[campo] == elemento]
+    if len(linha) == 1:
+        linha = linha.values.tolist()
+        linha = linha[0]
+    else:
+        linha = linha.values.tolist()
+
+    return linha
 
 
 def acertavalor(valor):
