@@ -51,6 +51,7 @@ tempoinicio = time.time()
 mensagemetapa = ''
 
 for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
+    print(arquivo)
     objarquivo = aux.TrabalhaArquivo(arquivo)
     inicioetapa = time.time()
     mensagemetapa = 'Verificando Cabeçalho...'
@@ -70,6 +71,10 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     print(mensagemetapa)
 
     listadicionario = objarquivo.preparadf('Mont.em MI')
+
+    listafornecedores = objarquivo.adicionafornecedor(listadicionario)
+
+
     # objarquivo.preparadf('Mont.em MI')
 
     fimetapa = time.time()
@@ -80,6 +85,11 @@ for arquivo in aux.retornaarquivos(arquivo_caminho_origem):
     if listadicionario is not None:
         if not listadicionario.isEmpty():
             listadicionario.to_csv(arquivo_caminho_destino+'\\'+Path(arquivo).stem + '.txt', index=None, sep='|', mode='a', encoding=codentrada)
+
+    if listafornecedores is not None:
+        if not listafornecedores.isEmpty():
+            listafornecedores.to_csv(arquivo_caminho_destino+'\\'+Path(arquivo).stem + '_FORN.txt', index=None, sep='|', mode='a', encoding=codentrada)
+
 
     # fimetapa = time.time()
     # inicioetapa = aux.tratatempo(inicioetapa, fimetapa, mensagemetapa)

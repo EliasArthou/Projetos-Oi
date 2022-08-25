@@ -279,129 +279,130 @@ class TrabalhaArquivo:
         except Exception as e:
             self.arvore.append(str(e))
 
-    def listarnumeros(self, df, inicioetapa):
+    def listarnumeros(self, doc, tipo='', fornecedor='', material='', pedido='', texto='', conta='',
+                      transformaremtexto=False):
         """
-        :param inicioetapa: tempo de início
-        :param df: dataframe de entrada
+        :param doc: documento de entrada ou tupla de entrada.
+        :param tipo: tipo do lançamento.
+        :param fornecedor: campo fornecedor da linha.
+        :param material: campo material da linha.
+        :param pedido: campo pedido da linha.
+        :param texto: texto para extrair os números.
+        :param conta: conta da linha.
+        :param transformaremtexto: transformar a lista em texto.
+        :param retornarquantidade: retorna a quantidade de fornecedor por linha.
         :return:
         """
 
         # try:
-        mensagemetapa = 'Preparando análise do campo texto (Fornecedor)...'
-        print(mensagemetapa)
-        fimetapa = time.time()
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
 
-        dfforn = df[['Fornecedor', 'Texto', 'Tipo']]
-        dfforn['pedaco'] = 'FORN'
-        argforn = [tuple(x) for x in dfforn.to_numpy()]
-        fimetapa = time.time()
 
-        mensagemetapa = 'Preparação pronta (Fornecedor)...'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
+        listabuscado = None
 
-        mensagemetapa = 'Preparando análise do campo texto (Material)...'
-        print(mensagemetapa)
-        fimetapa = time.time()
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-
-        dfmat = df[['Material', 'Texto', 'Tipo']]
-        dfmat['pedaco'] = 'MAT'
-        argmat = [tuple(x) for x in dfforn.to_numpy()]
-        fimetapa = time.time()
-
-        mensagemetapa = 'Preparação pronta (Material)...'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-
-        mensagemetapa = 'Preparando análise do campo texto (Pedido)...'
-        print(mensagemetapa)
-        fimetapa = time.time()
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-
-        dfped = df[['Pedido', 'Texto', 'Tipo']]
-        dfped['pedaco'] = 'PED'
-        argped = [tuple(x) for x in dfforn.to_numpy()]
-        fimetapa = time.time()
-
-        mensagemetapa = 'Preparação pronta (Pedido)...'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-
-        if psutil.cpu_count() > 2:
-            nucleosusados = int(psutil.cpu_count() * 0.75) if int(psutil.cpu_count() * 0.75) > 2 else 2
+        if type(doc) is not tuple:
+            doctemp = doc.strip()
+            tipo = tipo.strip()
+            fornecedor = fornecedor.strip()
+            material = material.strip()
+            pedido = pedido.strip()
+            texto = texto.strip().upper()
+            conta = conta.strip()
         else:
-            nucleosusados = 1
+            doctemp, tipo, fornecedor, material, pedido, texto, conta = doc
+            doctemp = doctemp.strip()
+            tipo = tipo.strip()
+            fornecedor = fornecedor.strip()
+            material = material.strip()
+            pedido = pedido.strip()
+            texto = texto.strip().upper()
+            conta = conta.strip()
 
-        if self.arvore is None:
-            self.preencherarvore()
+        textooriginal = texto
+        if texto == 'VENDA OI PLACE NF 001184':
+            w = 1
 
-        mensagemetapa = 'Tratando Fornecedor...'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        listaforn = pqdm(argforn, self.retornarinftexto, n_jobs=nucleosusados, unit=' linhas')
-        mensagemetapa = 'Fornecedor Tratado'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Tratando Material...'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        listamat = pqdm(argmat, self.retornarinftexto, n_jobs=nucleosusados, unit=' linhas')
-        mensagemetapa = 'Material Tratado'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        mensagemetapa = 'Tratando Pedido...'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-        listaped = pqdm(argped, self.retornarinftexto, n_jobs=nucleosusados, unit=' linhas')
-        mensagemetapa = 'Pedido Tratado'
-        print(mensagemetapa)
-        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
+        listafornecedor = self.retornarinftexto(fornecedor, texto, tipo, 'FORN')
+        listamaterial = self.retornarinftexto(material, texto, tipo, 'MAT')
+        listapedido = self.retornarinftexto(pedido, texto, tipo, 'PED')
 
+        if len(conta) > 0:
+            camposaadicionar = self.retornabusca('Conta', conta)
+            contadespesa = True if len(camposaadicionar) > 0 else False
+            if contadespesa:
+                pacote = camposaadicionar[1]
+            else:
+                pacote = ''
 
-        # doctemp, tipo, fornecedor, material, pedido, texto, conta = lista
-        # doctemp = doctemp.strip()
-        # tipo = tipo.strip()
-        # fornecedor = fornecedor.strip()
-        # material = material.strip()
-        # pedido = pedido.strip()
-        # texto = texto.strip().upper()
-        # conta = conta.strip()
+        listaconcat = []
 
-        # listafornecedor= self.retornarinftexto(fornecedor, texto, tipo, 'FORN')
-        # listamaterial = self.retornarinftexto(material, texto, tipo, 'MAT')
-        # listapedido = self.retornarinftexto(pedido, texto, tipo, 'PED')
-        listapacote = []
-        listacontadespesa = []
-        listacontas = df['Razão'].values.tolist()
+        if listafornecedor is not None:
+            listaconcat.append(listafornecedor)
 
-        for conta in listacontas:
-            if len(conta) > 0:
-                camposaadicionar = self.retornabusca('Conta', conta)
-                contadespesa = True if len(camposaadicionar) > 0 else False
-                if contadespesa:
-                    listapacote.append(camposaadicionar[1])
-                else:
-                    listapacote.append('')
+        if listamaterial is not None:
+            listaconcat.append(listamaterial)
 
-                listacontadespesa.append(contadespesa)
+        if listapedido is not None:
+            listaconcat.append(listapedido)
 
-        if not self.dadostexto.isempty:
+        if len(listaconcat) > 0:
+            lista = pd.concat(listaconcat)
+        else:
+            lista = ''
+
+        if len(lista) > 0:
+            dfdadostexto = lista
             # Inicia a variável de "Sem Valor" do Python
             nan_value = float("NaN")
             # Substitui a variável vazia por sem valor
-            self.dadostexto.replace('', nan_value, inplace=True)
+            dfdadostexto.replace('', nan_value, inplace=True)
+            dfdadostexto['Doc'] = doctemp
+            dfdadostexto['Texto'] = textooriginal
             # item = self.dadostexto['Item'].values.tolist()
             # doc = self.dadostexto['Doc'].values.tolist()
             # texto = self.dadostexto['Texto'].values.tolist()
-            # if len(conta) > 0:
-            #     self.dadostexto['Conta Despesa'] = contadespesa
-            #     self.dadostexto['Pacote'] = pacote
+            if len(conta) > 0:
+                dfdadostexto['Conta Despesa'] = contadespesa
+                dfdadostexto['Pacote'] = pacote
                 # contadespesa = dfsaida['Conta Despesa'].values.tolist()
                 # pacote = dfsaida['Pacote'].values.tolist()
 
+                dfdadostexto = dfdadostexto[dfdadostexto['Conta Despesa'] == True]
+                if not dfdadostexto.empty:
+                    if transformaremtexto:
+                        lista = dfdadostexto.astype(str)
+                        listatemp = lista
+                        lista = ', '
+                        lista = lista.join(listatemp)
+                        return lista
+                    else:
+                        return dfdadostexto
+                else:
+                    return
+
+        # if retornarquantidade:
+        #     listaquant = len(lista)
+        #     if transformaremtexto:
+        #         listatemp = lista
+        #         lista = ', '
+        #         lista = lista.join(listatemp)
+        #     if len(conta) > 0:
+        #         return lista, listaquant, contadespesa, pacote
+        #     else:
+        #         return lista, listaquant
+        # else:
+
+        else:
+            return
+
+        # except:
+        #     print('Erro na linha com os item: ' + doc, tipo, texto, conta)
+
     def retornabusca(self, campo, elemento):
+        """
+        :param campo: campo para busca
+        :param elemento: elemento a ser buscado
+        :return:
+        """
         linha = self.arvore.loc[self.arvore[campo] == elemento]
         if len(linha) == 1:
             linha = linha.values.tolist()
@@ -517,7 +518,7 @@ class TrabalhaArquivo:
         :return: conta a linha dos arquivos
         """
         quantlinha = 0
-        with open(self.caminho, 'r', encoding='ANSI') as arquivo:
+        with open(self.caminho, 'r', encoding=codificacao) as arquivo:
             texto = arquivo.readlines()
             for linha in texto:
                 quantlinha += 1
@@ -530,8 +531,6 @@ class TrabalhaArquivo:
         :param destino: caminho de destino dos arquivos.
         :return:
         """
-        linhatemp = ''
-
         caminhotemp = self.caminho.upper()
         caminhoarquivo = destino + '\\' + os.path.basename(caminhotemp.replace('.TXT', '_tratado.TXT'))
 
@@ -556,9 +555,8 @@ class TrabalhaArquivo:
         listofdict = [dict(zip(cabecalhoacertado, line)) for line in self.listaarquivo]
         return listofdict
 
-    def preparadf(self, campovalor='', adicionafornecedor=True):
+    def preparadf(self, campovalor=''):
         """
-        :param adicionafornecedor: adiciona o fornecedor.
         :param campovalor: nome do campo a ser tratado como valor (põe em float também)
         :return:
         """
@@ -608,68 +606,66 @@ class TrabalhaArquivo:
         if len(campovalor) > 0:
             df[campovalor] = df[campovalor].apply(acertavalor)
 
-        if adicionafornecedor:
-            # Processamento sequencial
-            # totalinhas = len(df.index)
-            # with tqdm(total=totalinhas, unit=' linhas') as barra_progresso:
-            # for indice, linha in enumerate(df['Tipo']):
-            #    listafornecedores.append(listarnumeros(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice], True))
-            #    barra_progresso.update()
-
-            # Processamento Paralelo
-            # listafornecedores = Parallel(n_jobs=3)(delayed(listarnumeros)(list(df['Tipo'].values)[indice], list(df['Texto'].values)[indice]) for indice, linha in enumerate(df['Tipo']))
-            # Processamento Paralelo 2
-            fimetapa = time.time()
-            inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-            mensagemetapa = 'Preparando análise do campo texto...'
-            print(mensagemetapa)
-
-            dfcut = df[['Nº doc.', 'Tipo', 'Fornecedor', 'Material', 'Doc.compra', 'Texto', 'Razão']]
-            inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
-            mensagemetapa = 'Análise do campo texto...'
-            print(mensagemetapa)
-            time.sleep(1)
-            # if psutil.cpu_count() > 2:
-            #     nucleosusados = int(psutil.cpu_count() * 0.75) if int(psutil.cpu_count() * 0.75) > 2 else 2
-            # else:
-            #     nucleosusados = 1
-
-            self.listarnumeros(dfcut, inicioetapa)
-            # pqdm(argumentos, self.listarnumeros, n_jobs=nucleosusados, unit=' linhas')
-            # if len(listafornecedores) > 0:
-            #     if type(listafornecedores[0]) is tuple:
-            #         listatemp = []
-            #         for indice, x in enumerate(listafornecedores):
-            #             if type(x) is tuple:
-            #                 listatemp.append(list(x))
-            #             else:
-            #                 if type(x) is AttributeError:
-            #                     listatemp.append((str(x), 0))
-            #
-            # doc, texto, contadespesa, pacote, item, tipo = map(list, zip(*listatemp))
-
-            # dfforn = None
-
-            # doccleaning = [i for i in doc if i is not None]
-            #
-            # dfforn['DOC'] = doccleaning
-            # dfforn['Texto'] = texto
-            # dfforn['Conta de Despesa?'] = contadespesa
-            # dfforn['Pacote N3'] = pacote
-            # dfforn['Desc Item'] = item
-            # dfforn['Tipo'] = tipo
-
-        # self.dadosarquivo = df
-
         return df
 
         fimetapa = time.time()
         inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
 
+    def adicionafornecedor(self, dfentrada):
+        """
+        :param dfentrada: dataframe com as informações.
+
+        """
+        inicioetapa = time.time()
+        mensagemetapa = 'Preparando análise do campo texto...'
+        print(mensagemetapa)
+
+        dfcut = dfentrada[['Nº doc.', 'Tipo', 'Fornecedor', 'Material', 'Doc.compra', 'Texto', 'Razão']]
+        argumentos = [tuple(x) for x in dfcut.to_numpy()]
+        fimetapa = time.time()
+        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
+        mensagemetapa = 'Analisando o campo texto...'
+        print(mensagemetapa)
+        time.sleep(1)
+        if psutil.cpu_count() > 2:
+            nucleosusados = int(psutil.cpu_count() * 0.75) if int(psutil.cpu_count() * 0.75) > 2 else 2
+        else:
+            nucleosusados = 1
+
+        if self.arvore is None:
+            self.preencherarvore()
+
+        lista = pqdm(argumentos, self.listarnumeros, n_jobs=nucleosusados, unit=' linhas')
+        # lista = None
+        # for linha in argumentos:
+        #     retorno = self.listarnumeros(linha)
+        #     if retorno is not None:
+        #         if hasattr(lista, 'empty'):
+        #             if lista.empty:
+        #                 lista = retorno
+        #             else:
+        #                 lista = pd.concat([lista, retorno])
+        #         else:
+        #             lista = retorno
+
+        lista = lista[['Doc', 'Texto', 'Conta Despesa', 'Pacote', 'Tipo', 'Item']]
+        inicioetapa = tratatempo(inicioetapa, fimetapa, mensagemetapa)
+
+        return lista
+
+
+
     def retornarinftexto(self, campobuscado, texto, tipo, pedaconferencia):
+        """
+        :param campobuscado: campo individual que está sendo buscado no texto, se tiver informação, não busca no texto.
+        :param texto: campo texto onde a informação é buscada.
+        :param tipo: tipo do lançamento da linha para saber como buscar a informação.
+        :param pedaconferencia: um pedaço do texto pra referência Ex.: 'FORN' para fornecedor.
+        :return:
+        """
         import warnings
 
-        warnings.simplefilter('ignore', lineno=731)
+        warnings.simplefilter('ignore', lineno=757)
 
         if type(campobuscado) is tuple:
             campobuscadotemp, texto, tipo, pedaconferencia = campobuscado
@@ -699,7 +695,7 @@ class TrabalhaArquivo:
                 maximo = 10
 
             case _:
-                return
+                return ''
 
         # Verifica quantos itens da lista (nesse caso número) existem no texto, se não tem número ou uma quantidade
         # insuficiente para suprir o tamanho mínimo exigido na chamada da função não tenta buscar nada
@@ -750,22 +746,27 @@ class TrabalhaArquivo:
                     if item != pedaconferencia and item in textooriginal:
                         for indice, itembuscado in enumerate(lista):
                             if pedaconferencia in texto:
-                                listateste = re.findall(pedaconferencia + r'[A-Za-z0-9]*' + item + r'[^0-9]*' + itembuscado, texto)
+                                listateste = re.findall(
+                                    pedaconferencia + r'[A-Za-z0-9]*' + item + r'[^0-9]*' + itembuscado, texto)
                             else:
                                 listateste = re.findall(item + r'[^0-9]*' + itembuscado, texto)
                             if len(listateste) > 0:
                                 del (lista[indice])
                             else:
                                 itembuscado.strip().lstrip('0')
+                if len(lista) > 0:
+                    dflista = pd.DataFrame(list(lista))
+                    dflista.columns = ['Item']
 
-                dflista = pd.DataFrame(list(lista))
-                dflista.columns = ['Item']
+                    dflista = dflista.drop_duplicates()
 
-                dflista = dflista.drop_duplicates()
+                    dflista['Tipo'] = pedaconferencia
 
-                dflista['Tipo'] = pedaconferencia
+                    # lista = dflista.values.tolist()
 
-                return dflista
+                    return dflista
+                else:
+                    return None
             else:
                 return None
         else:
@@ -801,10 +802,15 @@ def to_raw(string):
 
 
 def tratatempo(inicioetapa, fimetapa, mensagemetapa):
+    """
+
+    :param inicioetapa: tempo de início da etapa.
+    :param fimetapa: tempo de fim da etapa.
+    :param mensagemetapa: mensagem que será exibida junto com o tempo decorrido.
+    :return:
+    """
     tempoetapa = fimetapa - inicioetapa
     hours, rem = divmod(tempoetapa, 3600)
     minutes, seconds = divmod(rem, 60)
     print(mensagemetapa + " " + f'{"{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), int(seconds))}')
     return fimetapa
-
-
